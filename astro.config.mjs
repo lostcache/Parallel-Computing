@@ -4,6 +4,8 @@ import starlight from "@astrojs/starlight";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://lostcache.github.io",
+  base: "/Parallel-Computing",
   integrations: [
     starlight({
       title: "Parallel Computing",
@@ -11,7 +13,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/withastro/starlight",
+          href: "https://github.com/lostcache/Parallel-Computing",
         },
       ],
       sidebar: [
