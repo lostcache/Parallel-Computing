@@ -58,7 +58,7 @@ export default defineConfig({
         },
         {
           label: "10. Conclusion",
-          link: "/10-conclusion",
+          link: "/Parallel-Computing/10-conclusion/",
         },
       ],
     }),
