@@ -1,8 +1,56 @@
 ---
 title: "1.4 Classifying Parallel Architectures: Flynn's Taxonomy"
-description: "A framework for categorizing parallel computer architectures."
+description: "A comprehensive framework for categorizing parallel computer architectures based on instruction and data streams."
 ---
 
-# 1.4 Classifying Parallel Architectures: Flynn's Taxonomy
+To bring structure to the diverse landscape of parallel computer designs, a classification system is needed. The most enduring and widely accepted framework is **Flynn's Taxonomy**, proposed by computer scientist Michael J. Flynn in 1966 [^20]. This taxonomy categorizes computer architectures based on two fundamental properties: the number of concurrent **instruction streams** the processor can manage and the number of concurrent **data streams** it can process [^22]. An instruction stream refers to the sequence of instructions executed by the machine, while a data stream refers to the sequence of data operated upon. This classification results in four distinct categories [^22].
 
-Content for this section is coming soon.
+## The Four Categories
+
+### 1. SISD (Single Instruction, Single Data)
+
+This category describes a traditional, uniprocessor sequential computer. It has a single control unit that fetches and executes a single stream of instructions, which operate on a single stream of data [^22]. This is the pure von Neumann architecture in its operational form. At any given moment, only one instruction is being processed [^22].
+
+**Examples:** Early personal computers (e.g., those based on Intel 386 or 486 processors), older mainframe computers, and simple embedded microcontrollers like the Arduino Uno [^20].
+
+### 2. SIMD (Single Instruction, Multiple Data)
+
+This architecture features a single control unit that dispatches a single instruction to multiple independent processing elements. Each processing element executes the exact same instruction, but it does so on its own unique piece of data [^22]. This model is extremely efficient for tasks that involve performing the same operation on large arrays or vectors of data, a concept known as data-level parallelism [^22].
+
+**Examples:** This is the dominant architecture for **Graphics Processing Units (GPUs)**, which achieve massive parallelism by executing the same shader program on thousands of pixels or vertices simultaneously [^20]. Other examples include historical vector supercomputers (e.g., Cray-1) and modern CPU instruction set extensions like Intel's SSE (Streaming SIMD Extensions) and AVX (Advanced Vector Extensions), and ARM's NEON, which allow a single CPU core to perform an operation on a short vector of data elements at once [^20].
+
+### 3. MISD (Multiple Instruction, Single Data)
+
+In this architecture, multiple instruction streams operate concurrently on a single data stream [^23]. This is by far the rarest of the four categories in practice. Its primary application is in creating highly reliable, fault-tolerant systems. By having multiple independent processing units perform different calculations (or the same calculation via different algorithms) on the same input data, the system can cross-check the results to detect and correct errors [^22].
+
+**Example:** The canonical example is the Space Shuttle's flight control computer system. It used multiple redundant computers that all processed the same stream of sensor data. Their outputs were compared to ensure correctness and to guard against hardware failures or radiation-induced soft errors [^21].
+
+### 4. MIMD (Multiple Instruction, Multiple Data)
+
+This is the most flexible, powerful, and general-purpose class of parallel computer. In a MIMD architecture, there are multiple autonomous processors, each capable of fetching and executing its own independent instruction stream on its own independent data stream [^22]. This allows for both task parallelism (different processors doing different tasks) and data parallelism. MIMD systems can be further subdivided into shared-memory and distributed-memory variants [^22].
+
+**Examples:** This category encompasses the vast majority of modern parallel systems, including all multi-core processors (e.g., Intel Core i7, AMD Ryzen), symmetric multiprocessing (SMP) servers, large-scale supercomputer clusters, and distributed computing networks like cloud computing platforms (Amazon EC2, Google Cloud) and grid computing projects (SETI@home) [^20].
+
+## Flynn's Taxonomy at a Glance
+
+| Architecture | Description | Instruction Stream | Data Stream | Key Characteristics | Real-World Examples |
+|:-------------|:------------|:------------------|:------------|:-------------------|:--------------------|
+| **SISD** | Single Instruction, Single Data | Single | Single | Sequential execution; uniprocessor. | Early PCs (Intel 386), simple microcontrollers. |
+| **SIMD** | Single Instruction, Multiple Data | Single | Multiple | Data-level parallelism; efficient for vector/matrix operations. | GPUs (NVIDIA, AMD), CPU extensions (AVX, NEON). |
+| **MISD** | Multiple Instruction, Single Data | Multiple | Single | Extremely rare; used for fault tolerance via redundancy. | Space Shuttle flight control computers. |
+| **MIMD** | Multiple Instruction, Multiple Data | Multiple | Multiple | Most flexible and powerful; supports task and data parallelism. | Multi-core CPUs, supercomputer clusters, cloud infrastructure. |
+
+## Modern Systems as Heterogeneous Hybrids
+
+While Flynn's Taxonomy provides essential, clean categories for understanding the principles of parallel architecture, it is important to recognize that modern high-performance systems are rarely pure examples of a single type. Instead, the dominant trend is towards **heterogeneous computing**, where systems are hybrids that incorporate multiple parallel models to achieve maximum efficiency [^20].
+
+This hierarchical and heterogeneous approach allows a system to match the most appropriate architectural model to different parts of a complex computational problem. For example, a modern supercomputer is a MIMD system at the highest level, consisting of thousands of interconnected nodes. Each of these nodes is also a MIMD system, containing a multi-core CPU where each core can execute an independent thread. But within each of those individual CPU cores are powerful SIMD units (the AVX vector engines) that can perform data-parallel operations. Furthermore, many of these nodes are equipped with GPU accelerators, which are massive SIMD engines.
+
+Therefore, a single, complex system can leverage MIMD parallelism at the cluster and multi-core level for high-level task coordination and control flow, while simultaneously leveraging SIMD parallelism at the core and GPU level for computationally intensive, data-parallel kernels. The taxonomy, therefore, is not just a tool for classifying entire machines, but for understanding the different parallel execution models that can coexist and cooperate within a single, complex, modern computer [^20].
+
+## References
+
+[^20]: Flynn's Taxonomy and Classification of Parallel Systems | Parallel and Distributed Computing Class Notes | Fiveable, accessed September 30, 2025, [https://fiveable.me/parallel-and-distributed-computing/unit-2/flynns-taxonomy-classification-parallel-systems/study-guide/Ohzf44x4HCtFZRjK](https://fiveable.me/parallel-and-distributed-computing/unit-2/flynns-taxonomy-classification-parallel-systems/study-guide/Ohzf44x4HCtFZRjK)
+[^21]: unit 2 classification of parallel computers - | HPC @ LLNL, accessed September 30, 2025, [https://hpc.llnl.gov/sites/default/files/parallelClassifications_0.pdf](https://hpc.llnl.gov/sites/default/files/parallelClassifications_0.pdf)
+[^22]: Flynn's Taxonomy - GeeksforGeeks, accessed September 30, 2025, [https://www.geeksforgeeks.org/computer-organization-architecture/computer-architecture-flynns-taxonomy/](https://www.geeksforgeeks.org/computer-organization-architecture/computer-architecture-flynns-taxonomy/)
+[^23]: Flynn's Taxonomy - SLING user documentation, accessed September 30, 2025, [https://doc.sling.si/en/hpc-guide/02-computer-architecture/01-flynns-taxonomy/01-flynns-taxonomy/](https://doc.sling.si/en/hpc-guide/02-computer-architecture/01-flynns-taxonomy/01-flynns-taxonomy/)

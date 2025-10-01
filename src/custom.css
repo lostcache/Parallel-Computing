@@ -1,0 +1,101 @@
+/* Import KaTeX CSS for math rendering */
+@import url("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css");
+
+/* Custom styles for citations */
+.citation {
+    color: #0066cc;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.citation:hover {
+    text-decoration: underline;
+}
+
+/* Bibliography styling */
+.bibliography {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e5e5;
+}
+
+.bibliography h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.bibliography ol {
+    padding-left: 1.5rem;
+}
+
+.bibliography li {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+/* Math expression styling */
+.katex {
+    font-size: 1.1em;
+}
+
+.katex-display {
+    margin: 1rem 0;
+    text-align: center;
+}
+
+/* Inline math styling */
+.katex-inline {
+    padding: 0 0.2rem;
+}
+
+/* Debug styles for citation processing */
+/* Show citation keys that haven't been processed */
+[data-citation]:not(.citation) {
+    background-color: yellow;
+    color: red;
+    padding: 2px 4px;
+    border: 1px solid red;
+}
+
+/* Style for processed citations */
+.citation {
+    background-color: #e6f3ff;
+    padding: 1px 3px;
+    border-radius: 3px;
+}
+
+/* Style for citation backlinks */
+.citation-backref {
+    font-size: 0.8em;
+    vertical-align: super;
+}
+
+/* Bibliography entry styles */
+#refs .csl-entry {
+    margin-bottom: 1em;
+    padding-left: 2em;
+    text-indent: -2em;
+}
+
+/* Dark mode support for citations and bibliography */
+@media (prefers-color-scheme: dark) {
+    .citation {
+        color: #66b3ff;
+        background-color: #1a2332;
+    }
+
+    .bibliography {
+        border-top-color: #444;
+    }
+
+    .bibliography h2 {
+        color: #e5e5e5;
+    }
+
+    [data-citation]:not(.citation) {
+        background-color: #665500;
+        color: #ffcc00;
+        border-color: #ffcc00;
+    }
+}
