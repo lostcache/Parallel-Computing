@@ -1,0 +1,46 @@
+---
+title: "2.2 The Demands of Modern Computation"
+description: "The computational challenges in science, AI, and finance that necessitate parallel processing."
+---
+The technological push away from single-core scaling was met by an equally powerful pull from the escalating demands of modern computational science, commerce, and artificial intelligence. Progress in nearly every field became gated by the ability to perform massive computations that were simply intractable for any single processor. Parallelism was no longer a niche for supercomputing; it became a necessity for continued innovation.
+***Scientific and Engineering Simulation: Modeling the Universe***
+High-Performance Computing (HPC) has long been a primary driver of parallel architectures, enabling the simulation of complex physical systems that are too large, too small, too fast, or too dangerous to study with direct experiments.
+
+* **Climate Modeling:** Global climate models, which form the basis for IPCC reports, divide the Earth into a 3D grid and solve the fundamental equations of fluid dynamics for each cell. The accuracy of these models is directly tied to their resolution. However, the computational cost scales dramatically; **doubling the spatial resolution (e.g., from 100km to 50km grid cells) requires approximately ten times the computing power**.[^1] A single, comprehensive simulation for an IPCC assessment can take many months to complete, even on the world's most powerful and energy-intensive supercomputers.[^2]
+* **Drug Discovery:** Computer-Aided Drug Design (CADD) is now essential for accelerating the discovery of new medicines.[^3] A key technique is
+  **molecular dynamics (MD) simulation**, which models the behavior of a potential drug molecule at the atomic level. This involves calculating the forces between millions of atoms over millions of discrete time steps—an inherently parallel problem perfectly suited for GPUs, which can perform these calculations orders of magnitude faster than CPUs.[^4]
+
+***The Artificial Intelligence Revolution: An Insatiable Appetite for Compute***
+Perhaps no field has a more voracious appetite for parallel computation than modern AI, particularly the training of Large Language Models (LLMs). The training process involves feeding a model a massive corpus of text—often trillions of words—and repeatedly adjusting billions or even trillions of parameters.
+
+| Model | Parameters | Training Tokens | Est. Training Compute Cost |
+| :---- | :---- | :---- | :---- |
+| **GPT-3** | 175 Billion | 300 Billion | \~$4.6 Million |
+| **Gopher** | 280 Billion | 300 Billion | N/A |
+| **Chinchilla** | 70 Billion | 1.4 Trillion | Same as Gopher |
+| **GPT-4** | \>1 Trillion (est.) | \>13 Trillion (est.) | \>$100 Million |
+| **Gemini Ultra** | N/A | N/A | \~$191 Million |
+
+(Sources: [^5])
+This staggering scale requires massive data centers equipped with tens of thousands of GPUs working in parallel for weeks or months on end.[^6] Groundbreaking research, such as the paper on the
+**Chinchilla** model, has established compute-optimal scaling laws: for a fixed computational budget, model size and the number of training tokens should be scaled equally.[^7] This finding implies that many previous large models were significantly "undertrained" and that the demand for both data and parallel computation will continue to grow exponentially.
+***Big Data and Finance: The Need for Real-Time Speed***
+The worlds of finance and big data analytics are defined by their need to process and act upon vast streams of information with extremely low latency, a requirement that mandates parallel processing.
+
+* **High-Frequency Trading (HFT):** This industry is built entirely on speed. HFT firms use sophisticated algorithms to analyze real-time market data and execute thousands of trades per second, aiming to profit from tiny price discrepancies that exist for only microseconds.[^8] Success requires a massively parallel infrastructure of powerful multi-core servers, GPUs, and even FPGAs, often physically co-located in the same data centers as the stock exchanges to minimize network latency.[^9]
+* **Big Data Analytics:** The entire field is predicated on parallel processing. Frameworks like MapReduce and Apache Spark are explicitly designed to solve problems by "dividing and conquering".[^10] A massive dataset is partitioned into smaller chunks and distributed across a cluster of servers, where operations are performed in parallel before the results are combined. This architecture is the engine behind search engines, e-commerce recommendation systems, and fraud detection.
+
+From modeling the climate to training AI and executing financial trades in the blink of an eye, the grand challenges of modern computation are all, at their core, parallel problems. The physical limits of the single core did not halt progress; they simply forced it down a new, more powerful, and ultimately more promising path.
+
+## References
+
+[^1]: Q&A: How do climate models work? - Carbon Brief, accessed October 1, 2025, [https://www.carbonbrief.org/qa-how-do-climate-models-work/](https://www.carbonbrief.org/qa-how-do-climate-models-work/)
+[^2]: The computational and energy cost of simulation and storage for climate science: lessons from CMIP6 - GMD, accessed October 1, 2025, [https://gmd.copernicus.org/articles/17/3081/2024/](https://gmd.copernicus.org/articles/17/3081/2024/)
+[^3]: Integrated Molecular Modeling and Machine Learning for Drug ..., accessed October 1, 2025, [https://pubs.acs.org/doi/10.1021/acs.jctc.3c00814](https://pubs.acs.org/doi/10.1021/acs.jctc.3c00814)
+[^4]: Best CPU, GPU, RAM for Molecular Dynamics | SabrePC Blog, accessed October 1, 2025, [https://www.sabrepc.com/blog/life-sciences/best-cpu-gpu-and-ram-for-md-workstation-server](https://www.sabrepc.com/blog/life-sciences/best-cpu-gpu-and-ram-for-md-workstation-server)
+[^5]: Large Language Model Training - Research AIMultiple, accessed October 1, 2025, [https://research.aimultiple.com/large-language-model-training/](https://research.aimultiple.com/large-language-model-training/)
+[^6]: What is the cost of training large language models? - CUDO Compute, accessed October 1, 2025, [https://www.cudocompute.com/blog/what-is-the-cost-of-training-large-language-models](https://www.cudocompute.com/blog/what-is-the-cost-of-training-large-language-models)
+[^7]: Training Compute-Optimal Large Language Models, accessed October 1, 2025, [https://proceedings.neurips.cc/paper_files/paper/2022/file/c1e2faff6f588870935f114ebe04a3e5-Paper-Conference.pdf](https://proceedings.neurips.cc/paper_files/paper/2022/file/c1e2faff6f588870935f114ebe04a3e5-Paper-Conference.pdf)
+[^8]: Understanding High-Frequency Trading (HFT): Basics, Mechanics, and Example, accessed October 1, 2025, [https://www.investopedia.com/terms/h/high-frequency-trading.asp](https://www.investopedia.com/terms/h/high-frequency-trading.asp)
+[^9]: Parallel Computing in High Frequency Trading | PDF - Scribd, accessed October 1, 2025, [https://www.scribd.com/presentation/831078975/Parallel-Computing-in-High-Frequency-Trading](https://www.scribd.com/presentation/831078975/Parallel-Computing-in-High-Frequency-Trading)
+[^10]: Parallel Computing in R for Big Data | Advanced R Programming Class Notes - Fiveable, accessed October 1, 2025, [https://fiveable.me/introduction-to-advanced-programming-in-r/unit-11](https://fiveable.me/introduction-to-advanced-programming-in-r/unit-11)
