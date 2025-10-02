@@ -10,9 +10,7 @@ export default defineConfig({
   base: "/Parallel-Computing",
   markdown: {
     remarkPlugins: [remarkMath],
-    rehypePlugins: [
-      rehypeKatex
-    ],
+    rehypePlugins: [rehypeKatex],
   },
   integrations: [
     starlight({
@@ -35,8 +33,10 @@ export default defineConfig({
           autogenerate: { directory: "2-imperative-for-parallelism" },
         },
         {
-          label: "3. The Evolution of Parallel Hardware: CPUs",
-          autogenerate: { directory: "3-A-Brief-History-of-parallel-architectures" },
+          label: "3. A Brief History of parallel architectures",
+          autogenerate: {
+            directory: "3-A-Brief-History-of-parallel-architectures",
+          },
         },
         {
           label: "4. The Evolution of Parallel Hardware: CPUs",
@@ -61,7 +61,8 @@ export default defineConfig({
           autogenerate: { directory: "8-parallel-algorithms" },
         },
         {
-          label: "9. Implementation: Frameworks, Libraries, and Hardware Mapping",
+          label:
+            "9. Implementation: Frameworks, Libraries, and Hardware Mapping",
           autogenerate: { directory: "9-implementation" },
         },
         {
