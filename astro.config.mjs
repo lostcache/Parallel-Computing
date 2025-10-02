@@ -36,37 +36,40 @@ export default defineConfig({
         },
         {
           label: "3. The Evolution of Parallel Hardware: CPUs",
-          autogenerate: { directory: "3-evolution-of-parallel-hardware-cpus" },
+          autogenerate: { directory: "3-A-Brief-History-of-parallel-architectures" },
         },
         {
-          label: "4. The Evolution of Parallel Hardware: Memory and Storage",
+          label: "4. The Evolution of Parallel Hardware: CPUs",
+          autogenerate: { directory: "4-evolution-of-parallel-hardware-cpus" },
+        },
+        {
+          label: "5. The Evolution of Parallel Hardware: Memory and Storage",
           autogenerate: {
-            directory: "4-evolution-of-parallel-hardware-memory",
+            directory: "5-evolution-of-parallel-hardware-memory",
           },
         },
         {
-          label: "5. The Evolution of Parallel Hardware: GPUs",
-          autogenerate: { directory: "5-evolution-of-parallel-hardware-gpus" },
+          label: "6. The Evolution of Parallel Hardware: GPUs",
+          autogenerate: { directory: "6-evolution-of-parallel-hardware-gpus" },
         },
         {
-          label: "6. General-Purpose Computing on GPUs (GPGPU)",
-          autogenerate: { directory: "6-gpgpu" },
+          label: "7. General-Purpose Computing on GPUs (GPGPU)",
+          autogenerate: { directory: "7-gpgpu" },
         },
         {
-          label: "7. Parallel Algorithms: Design and Analysis",
-          autogenerate: { directory: "7-parallel-algorithms" },
+          label: "8. Parallel Algorithms: Design and Analysis",
+          autogenerate: { directory: "8-parallel-algorithms" },
         },
         {
-          label:
-            "8. Implementation: Frameworks, Libraries, and Hardware Mapping",
-          autogenerate: { directory: "8-implementation" },
+          label: "9. Implementation: Frameworks, Libraries, and Hardware Mapping",
+          autogenerate: { directory: "9-implementation" },
         },
         {
-          label: "9. The Future of Parallelism",
+          label: "10. The Future of Parallelism",
           autogenerate: { directory: "9-future-of-parallelism" },
         },
         {
-          label: "10. Conclusion",
+          label: "11. Conclusion",
           link: "/Parallel-Computing/10-conclusion/",
         },
       ],
