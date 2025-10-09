@@ -1,8 +1,45 @@
 ---
-title: "5.1 From Fixed-Function to Programmable Shaders"
+title: "6.1 From Fixed-Function to Programmable Shaders"
 description: "The evolution of GPU architecture from dedicated graphics pipelines to general-purpose programmable units."
 ---
+The first great paradigm shift in GPU architecture was the liberation from a digital assembly line. Early GPUs were designed as a rigid, sequential series of processing stages known as the **fixed-function pipeline**. This model was an efficient but inflexible hardware implementation of the conceptual steps required to turn 3D data into a 2D image.[^1] Data would flow through a series of immutable, hardwired stages—vertex transformation, lighting, rasterization, texturing, and pixel output—each performing its specific task with ruthless efficiency but zero adaptability.[^4]
+For developers, this architecture was an architectural straitjacket. Using graphics APIs like DirectX and OpenGL, they could *configure* the pipeline—adjusting lighting parameters, selecting texture blending modes—but they could not fundamentally alter the operations themselves.[^7] If a programmer envisioned a novel lighting effect or a unique material surface, they were out of luck. True innovation was gated by the hardware vendors; a new effect required a new generation of silicon, a process that could take years.[^4] The fixed-function pipeline was a master of its designated tasks, but it was a barrier to the very creativity it was meant to enable.
+The mold was broken with the advent of **programmable shaders**. This revolutionary concept introduced small, developer-written programs that could replace key stages of the fixed-function pipeline, initially the vertex processing and pixel (or fragment) processing stages.[^1] This was a fundamental transfer of power from the hardware engineer to the software developer. The release of Microsoft's DirectX 8.0 in 2001, alongside the launch of the NVIDIA GeForce 3, brought this capability to the masses.[^8] Suddenly, the logic of how a vertex was transformed or a pixel was colored was no longer etched in silicon but defined in code.
+Early shaders were primitive by today's standards, written in low-level, assembly-like languages with strict limits on length and complexity.[^8] Yet, their impact was seismic. They enabled effects that were previously the exclusive domain of offline, non-real-time rendering. Crucially, they allowed for custom per-pixel lighting models, such as Phong shading, which calculates lighting on a per-pixel basis. This was a dramatic improvement over the per-vertex Gouraud shading common in the fixed-function era and was essential for rendering realistic specular highlights on curved surfaces—an effect the fixed pipeline could not properly implement.[^8]
+This transition was not merely a hardware story; it was a symbiotic co-evolution of hardware and software APIs. Before the widespread adoption of DirectX, the graphics industry was fragmented by proprietary APIs like 3dfx's Glide, creating an "API war" that stifled growth.[^4] Microsoft's DirectX acted as a powerful standardizing force, defining clear "eras" of GPU capability through its versioning.[^9] When DirectX 8.0 introduced Shader Model 1.x, it created a stable, common target for hardware vendors. This established a powerful feedback loop: the API defined a new set of programmable capabilities, hardware vendors competed to implement them, and developers could innovate on a reliable software platform. The programmability revolution was thus catalyzed as much by industry standardization as it was by raw silicon engineering.
 
-# 5.1 From Fixed-Function to Programmable Shaders
+#### Case Study: The *Doom 3* Engine \- Painting with Light in Real-Time
 
-Content for this section is coming soon.
+No piece of software better exemplifies the power and challenges of the early programmable shader era than id Software's *id Tech 4* engine, which powered the 2004 landmark title *Doom 3*.[^11] The engine's defining feature was its "Unified Lighting and Shadowing" system, a revolutionary approach that rendered all lighting and shadows dynamically on a per-pixel basis.[^11] This created the game's iconic, terrifying atmosphere of deep shadows and stark, moving lights—a visual fidelity previously unseen in real-time gaming.
+This was a feat only possible on GPUs with fully programmable vertex and pixel shaders, such as the NVIDIA GeForce 3 or ATI Radeon 8500.[^11] The engine used shadow volumes, a technique that required significant geometric processing, combined with per-pixel lighting calculations to create its hyper-realistic look. However, the launch of this powerful new hardware did not mean an overnight transition for the industry. The market was still saturated with older, fixed-function hardware. To be commercially viable,
+*Doom 3* had to run on a wide spectrum of machines.
+This led to one of the great software engineering challenges of the era: the creation of multiple, parallel rendering "code paths" within the same engine. Engine architect John Carmack developed distinct renderers to target different hardware capabilities.[^13]
+
+* An **ARB path** used older OpenGL extensions for basic per-pixel effects on cards like the original ATI Radeon.
+* An **NV10 path** used NVIDIA's proprietary "register combiners"—a limited, pre-shader form of programmability—for GeForce 2-class cards.
+* An **NV20 path** used full vertex programs on the GeForce 3 and 4 Ti.
+* An **R200 path** used ATI's specific fragment shader extension.
+* Finally, an **ARB2 path** used the standardized ARB\_vertex\_program and ARB\_fragment\_program extensions for the most modern cards of the day, like the Radeon 9700.[^13]
+
+This immense effort reveals that major architectural transitions in computing are rarely clean breaks. They are complex, multi-year affairs that require herculean software efforts to bridge the gap between the old and new, ensuring that experiences can scale across a diverse and evolving hardware landscape.
+
+The following table summarizes the fundamental differences between the two architectural paradigms.
+
+| Feature | Fixed-Function Pipeline | Programmable Pipeline (Early Shaders) |
+| :---- | :---- | :---- |
+| **Flexibility** | Low: Operations are hardwired into silicon. | High: Developers can write custom code for key stages. |
+| **Developer Control** | Configuration-based via APIs (e.g., setting lighting parameters). | Programming-based; direct control over vertex/pixel logic. |
+| **Innovation Cycle** | Tied to hardware revisions; slow. | Tied to software development; rapid. |
+| **Lighting Model** | Limited to built-in models (e.g., Gouraud shading). | Custom models possible (e.g., per-pixel Phong shading). |
+| **Example Hardware** | NVIDIA GeForce 256, ATI Radeon 7500. | NVIDIA GeForce 3, ATI Radeon 8500. |
+| **Defining Software** | DirectX 7.0. | DirectX 8.0, OpenGL 1.4 + extensions. |
+
+## References
+
+[^1]: History and Evolution of GPU Architecture, accessed October 3, 2025, [https://mcclanahoochie.com/blog/wp-content/uploads/2011/03/gpu-hist-paper.pdf](https://mcclanahoochie.com/blog/wp-content/uploads/2011/03/gpu-hist-paper.pdf)
+[^4]: GPGPU origins and GPU hardware architecture, accessed October 3, 2025, [https://d-nb.info/1171225156/34](https://d-nb.info/1171225156/34)
+[^7]: Fixed-function (computer graphics) - Wikipedia, accessed October 3, 2025, [https://en.wikipedia.org/wiki/Fixed-function\_(computer\_graphics)](https://en.wikipedia.org/wiki/Fixed-function_\(computer_graphics\))
+[^8]: The programmable pipeline and Shaders, accessed October 3, 2025, [https://www.cse.unsw.edu.au/\~cs3421/16s2/lectures/06\_ShadingAndShaders.pdf](https://www.cse.unsw.edu.au/~cs3421/16s2/lectures/06_ShadingAndShaders.pdf)
+[^9]: The Eras of GPU Development - ACM SIGGRAPH Blog, accessed October 3, 2025, [https://blog.siggraph.org/2025/04/evolution-of-gpus.html/](https://blog.siggraph.org/2025/04/evolution-of-gpus.html/)
+[^11]: id Tech 4 - Wikipedia, accessed October 3, 2025, [https://en.wikipedia.org/wiki/Id\_Tech\_4](https://en.wikipedia.org/wiki/Id_Tech_4)
+[^13]: Doom 3 - OpenGL: Advanced Coding - Khronos Forums, accessed October 3, 2025, [https://community.khronos.org/t/doom-3/37313](https://community.khronos.org/t/doom-3/37313)

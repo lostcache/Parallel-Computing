@@ -1,8 +1,48 @@
 ---
-title: "5.3 Modern GPU Architecture: SMs and CUs"
+title: "6.3 Modern GPU Architecture: SMs and CUs"
 description: "Understanding the structure and organization of Streaming Multiprocessors and Compute Units in contemporary GPUs."
 ---
+The unified architecture established the fundamental design principle of modern GPUs, but the implementation has grown vastly more complex. A modern GPU is not a flat array of thousands of cores. Instead, it is a deeply hierarchical system designed for scalability and efficiency. The unified processors—known as **CUDA Cores** by NVIDIA or **Stream Processors** by AMD—are grouped into powerful, self-contained execution blocks. In NVIDIA's terminology, this block is the **Streaming Multiprocessor (SM)**; in AMD's, it is the **Compute Unit (CU)**.[^1]  
+These SMs and CUs are the true engines of the GPU. Each contains its own instruction schedulers, register files, execution units, and extremely fast local memory or caches.[^26] These blocks are then replicated dozens of times across the silicon die, often grouped into even larger structures like NVIDIA's Graphics Processing Clusters (GPCs).[^25] This hierarchical design is the key to managing the immense complexity of a modern GPU and scaling its performance from mobile chips to data center behemoths. Over the past decade, the evolution of the SM and the CU has diverged, creating distinct architectural philosophies that reflect the differing strategic priorities of the two industry giants.
 
-# 5.3 Modern GPU Architecture: SMs and CUs
+### The NVIDIA Approach: The Streaming Multiprocessor (SM)
 
-Content for this section is coming soon.
+NVIDIA's SM has evolved through successive generations with a clear focus on maximizing throughput and embracing specialization for the burgeoning fields of AI and HPC.
+
+* **Pascal (2016):** The Pascal architecture refined the SM for greater efficiency. The flagship GP100 SM featured 64 FP32 CUDA cores, a reduction from the 128 in the preceding Maxwell architecture. However, these cores were partitioned into two 32-core blocks, each with its own independent warp scheduler and instruction buffer. This allowed for finer-grained resource allocation and improved instruction-level parallelism, boosting overall efficiency even with fewer cores per SM.[^28]  
+* **Volta (2017):** The Volta architecture represented a seismic shift, redesigning the SM to accelerate the AI revolution. Its landmark innovation was the **Tensor Core**, a specialized hardware unit purpose-built to perform the mixed-precision 4x4 matrix multiply-accumulate operations (D=A×B+C) that are the computational bedrock of deep learning.[^29] A single Volta SM contained eight Tensor Cores, providing a 12-fold increase in deep learning training performance over Pascal.[^30] Volta also added dedicated INT32 cores, allowing integer and floating-point instructions to execute simultaneously for the first time, further boosting throughput.[^29]  
+* **Ampere (2020):** The Ampere architecture doubled down on this strategy. Its SM introduced third-generation Tensor Cores with support for new, more efficient numerical formats like TensorFloat-32 (TF32) and hardware acceleration for sparsity, which can double performance by ignoring zero-values in neural networks.[^31] Ampere also attacked the data bottleneck by increasing the combined L1 cache and shared memory capacity by 50% (to 192 KB per SM) and introducing new asynchronous copy instructions that allow data to be moved directly from global memory into shared memory without tying up the core's main registers.[^32]
+
+### The AMD Approach: The Compute Unit (CU)
+
+AMD's architectural journey saw a major pivot, moving from a compute-centric design to one hyper-optimized for the demands of real-time gaming.
+
+* **Graphics Core Next (GCN) (2012-2019):** For nearly a decade, GCN was the foundation of AMD's GPUs. The GCN CU was a powerful compute engine, featuring four 16-wide SIMD (Single Instruction, Multiple Data) vector units, a separate scalar unit for control flow, and a 64 KB Local Data Share (LDS) for fast inter-thread communication.[^26] It executed work in groups of 64 threads called "Wavefronts" (Wave64). While potent for GPGPU tasks, its 4-cycle instruction issue latency and Wave64 design could be less efficient for the highly divergent, complex shaders found in modern games.[^34]  
+* **Radeon DNA (RDNA) (2019-Present):** RDNA marked a fundamental redesign aimed squarely at gaming performance. It introduced the **Workgroup Processor (WGP)**, a new building block that contains two CUs.[^35] The most critical change was shifting the native execution model from the 64-thread wavefront to a more nimble  
+  **32-thread wavefront (Wave32)**. This reduces latency and improves efficiency, as smaller groups of threads are less likely to be stalled by divergent branches in shader code.[^34] RDNA also overhauled the memory subsystem, introducing a multi-level cache hierarchy (L0 and L1) to better feed the redesigned SIMD units, which now boast a single-cycle instruction issue rate—a 4x latency reduction compared to GCN.[^34]
+
+The architectural DNA of the SM and CU is a direct reflection of NVIDIA's and AMD's differing business strategies. NVIDIA's commanding position in the high-margin data center and AI markets justifies its massive investment in specialized hardware like Tensor Cores, creating a deep technological moat for those lucrative workloads.[^29] The SM's evolution is a story of increasing specialization for compute. AMD, as the exclusive GPU provider for the PlayStation and Xbox consoles and a fierce competitor in PC gaming, is strategically incentivized to optimize for that domain. The RDNA architecture's focus on latency reduction and shader efficiency is a direct answer to the needs of the gaming market.[^34] The silicon itself tells the story of corporate strategy: NVIDIA's SM is built to dominate the data center, while AMD's RDNA WGP is built to win the gaming wars.  
+Furthermore, while headline marketing figures often trumpet raw FLOPS and core counts, the deeper architectural narrative is a relentless battle against the memory bottleneck. As the number of cores explodes, the primary challenge becomes feeding them with data.[^6] A stalled core is a useless core. NVIDIA's asynchronous copy instructions and AMD's new cache hierarchy are not compute features; they are data logistics features. They reveal that the true measure of a modern GPU is increasingly defined by its memory subsystem. The architectural war has shifted from simply adding more processors to designing a sophisticated logistical network to keep them fed.  
+The following table provides a high-level comparison of the two modern architectural philosophies.
+
+| Feature | NVIDIA Ampere SM | AMD RDNA 2 WGP (Dual CU) |
+| :---- | :---- | :---- |
+| **Core Execution Unit** | 128 FP32 CUDA Cores (with dual-path for FP32). | 2 CUs, each with two 32-wide SIMD units. |
+| **Thread Grouping** | Warp (32 threads). | Wavefront (Native Wave32, supports Wave64). |
+| **Key Specialization** | 4x Third-Gen Tensor Cores (AI/Matrix Math), 1x RT Core. | 1x Ray Accelerator per CU. |
+| **Local Memory/Cache** | 192 KB unified L1 Data Cache / Shared Memory. | 128 KB L1 Cache per WGP, 16KB L0 per CU. |
+| **Architectural Focus** | Heavily optimized for AI/HPC workloads alongside graphics. | Primarily optimized for gaming latency and efficiency. |
+
+## References
+
+[^1]: History and Evolution of GPU Architecture, accessed October 3, 2025, [https://mcclanahoochie.com/blog/wp-content/uploads/2011/03/gpu-hist-paper.pdf](https://mcclanahoochie.com/blog/wp-content/uploads/2011/03/gpu-hist-paper.pdf)
+[^6]: Evolution of Graphics Pipelines — mcs572 0.7.8 documentation, accessed October 3, 2025, [http://homepages.math.uic.edu/\~jan/mcs572f16/mcs572notes/lec28.html](http://homepages.math.uic.edu/~jan/mcs572f16/mcs572notes/lec28.html)
+[^25]: Understanding Modern Gpu Architecture - Mohit Mishra, accessed October 3, 2025, [https://mohitmishra786.github.io/chessman/2024/11/24/Understanding-Modern-GPU-Architecture.html](https://mohitmishra786.github.io/chessman/2024/11/24/Understanding-Modern-GPU-Architecture.html)
+[^26]: Graphics Core Next - Wikipedia, accessed October 3, 2025, [https://en.wikipedia.org/wiki/Graphics\_Core\_Next](https://en.wikipedia.org/wiki/Graphics_Core_Next)
+[^28]: NVIDIA Pascal GP100 Architecture Deep-Dive | GamersNexus, accessed October 3, 2025, [https://gamersnexus.net/guides/2423-nvidia-pascal-gp100-architecture-deep-dive-specs](https://gamersnexus.net/guides/2423-nvidia-pascal-gp100-architecture-deep-dive-specs)
+[^29]: Volta Tuning Guide - NVIDIA Docs, accessed October 3, 2025, [https://docs.nvidia.com/cuda/pdf/Volta\_Tuning\_Guide.pdf](https://docs.nvidia.com/cuda/pdf/Volta_Tuning_Guide.pdf)
+[^30]: NVIDIA TESLA V100 GPU ARCHITECTURE, accessed October 3, 2025, [https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf](https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf)
+[^31]: NVIDIA A100 Tensor Core GPU Architecture, accessed October 3, 2025, [https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf](https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf)
+[^32]: NVIDIA Ampere Architecture In-Depth | NVIDIA Technical Blog, accessed October 3, 2025, [https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/](https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/)
+[^34]: \[AMD\] RDNA Whitepaper : r/Amd - Reddit, accessed October 3, 2025, [https://www.reddit.com/r/Amd/comments/ctfbem/amd\_rdna\_whitepaper/](https://www.reddit.com/r/Amd/comments/ctfbem/amd_rdna_whitepaper/)
+[^35]: RDNA Architecture - AMD GPUOpen, accessed October 3, 2025, [https://gpuopen.com/download/RDNA\_Architecture\_public.pdf](https://gpuopen.com/download/RDNA_Architecture_public.pdf)
