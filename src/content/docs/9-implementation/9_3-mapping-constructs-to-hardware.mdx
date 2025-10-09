@@ -1,8 +1,199 @@
 ---
-title: "8.3 Mapping Constructs to Hardware: An Example"
+title: "9.3 Mapping Constructs to Hardware: An Example"
 description: "A detailed example of how high-level parallel constructs are mapped to underlying hardware architectures."
 ---
+The theoretical concepts of programming models, compilers, and runtimes become tangible when we trace the path of a specific algorithm from source code to execution on physical hardware. By examining how a canonical parallel problem—matrix multiplication—is implemented on two distinct architectures, a multi-core CPU and a many-core GPU, we can illuminate the profound influence of hardware design on software strategy. The most efficient parallelization approach is not an intrinsic property of the algorithm but is instead dictated by the architectural realities of the target machine.
 
-# 8.3 Mapping Constructs to Hardware: An Example
+### **9.3.1 The Canonical Problem: Matrix multiplication**
 
-Content for this section is coming soon.
+The multiplication of two matrices, C=A×B, is a cornerstone of linear algebra and a fundamental operation in countless scientific and engineering domains.[^60] The computation of each element Ci,j​ involves the dot product of the i-th row of matrix A and the j-th column of matrix B [^61]:
+Ci,j​=k=0∑N−1​Ai,k​×Bk,j​
+This algorithm has a computational complexity of O(N3) for N×N matrices, making it computationally intensive and a prime candidate for parallelization.[^62] Critically, the calculation for each element Ci,j​ is completely independent of the calculation for any other element. This property makes matrix multiplication an "embarrassingly parallel" problem, providing a clear and ideal test case for demonstrating parallel implementation techniques.[^61]
+
+### **9.3.2 Mapping to a Multi-Core CPU with OpenMP**
+
+For a typical shared-memory multi-core CPU, OpenMP provides a straightforward and efficient path to parallelization.
+
+#### **The Code**
+
+A standard C++ implementation of matrix multiplication involves three nested loops. Parallelizing this with OpenMP is remarkably simple: a single directive, \#pragma omp parallel for, is placed before the outermost loop. This instructs the compiler to divide the iterations of the i loop—which correspond to the rows of the output matrix C—among a team of parallel threads.[^60]
+
+C++
+
+```cpp
+// C, A, and B are N x N matrices  
+\#pragma omp parallel for  
+for (int i \= 0; i \< N; i++) {  
+    for (int j \= 0; j \< N; j++) {  
+        double sum \= 0.0;  
+        for (int k \= 0; k \< N; k++) {  
+            sum \+= A\[i\]\[k\] \* B\[k\]\[j\];  
+        }  
+        C\[i\]\[j\] \= sum;  
+    }  
+}
+```
+
+#### **Logical-to-Physical Mapping**
+
+The journey from this pragma to hardware execution involves a precise collaboration between the compiler, the OpenMP runtime, and the operating system:
+
+1.  **Compiler Transformation:** Upon seeing the \#pragma omp parallel for, the compiler transforms the code. It generates a function containing the loop body and inserts calls to the OpenMP runtime library to manage the parallel region.[^54]
+2.  **Runtime Thread Creation:** When the program is executed, the OpenMP runtime creates a team of software threads. By default, this is often one thread per available CPU core.[^18]
+3.  **Thread-to-Core Mapping (Affinity):** The operating system scheduler, in conjunction with the OpenMP runtime, maps these software threads onto the physical CPU cores. This mapping, or **thread affinity**, is critical for performance. Programmers can exert control over this process using environment variables.[^64] OMP\_PLACES defines the set of available hardware resources (e.g., cores, sockets), while OMP\_PROC\_BIND specifies the placement policy. For example, OMP\_PROC\_BIND=close will pack threads onto cores within a single socket before using another, which can be beneficial for applications with high data sharing. Conversely, OMP\_PROC\_BIND=spread will distribute threads as widely as possible across all sockets and cores, which can maximize memory bandwidth for applications where threads are more independent.[^65]
+
+#### **Hardware Considerations in Execution**
+
+Once threads are running on cores, their performance is governed by the intricate behavior of the CPU's memory subsystem. The programmer's view of memory as a simple, flat, shared space is a powerful abstraction, but it is layered upon a complex physical reality.
+
+*   **Cache Coherence:** Each CPU core has its own private L1 and L2 caches to reduce memory access latency.[^67] When multiple threads on different cores compute rows of the matrix C, they are all writing to a shared data structure. This creates a **cache coherence** problem: a core's private cache might hold a "stale" copy of a memory location that has been updated by another core.[^68] To solve this, multi-core CPUs implement a hardware cache coherence protocol, most commonly **MESI** (Modified, Exclusive, Shared, Invalid) or a variant.[^67] In this protocol, caches "snoop" on a shared bus. When one core writes to a cache line, it broadcasts an invalidation signal, forcing other cores that have a copy of that line to mark it as invalid. The next time another core needs that data, it will experience a cache miss and fetch the updated version from memory or directly from the modifying core's cache.[^68] This hardware mechanism is what makes the shared-memory illusion work, but it comes with communication overhead that can impact performance, especially if threads write to nearby memory locations that fall on the same cache line (a phenomenon known as *false sharing*).[^67]
+*   **Non-Uniform Memory Access (NUMA):** In systems with multiple processor sockets, the shared memory is physically distributed. A CPU core can access the memory bank attached to its own socket (local memory) much faster than it can access memory attached to another socket (remote memory).[^69] This creates a Non-Uniform Memory Access architecture. If a thread running on a core in Socket 0 is assigned to compute a row of C whose data happens to have been allocated in the memory of Socket 1, every memory access will incur the higher latency of traversing the inter-socket interconnect.[^69] NUMA-aware scheduling, managed by the OS and guided by OpenMP affinity settings, is therefore crucial for performance. By ensuring that threads and the data they operate on are co-located on the same NUMA node (e.g., using OMP\_PROC\_BIND=close), these remote access penalties can be minimized, allowing the application to scale effectively.[^70]
+
+### **9.3.3 Mapping to a GPU with CUDA**
+
+Mapping the same matrix multiplication problem to a GPU reveals a completely different architectural philosophy and, consequently, a different parallelization strategy.
+
+#### **The Code**
+
+A CUDA implementation consists of two parts: host code running on the CPU and a kernel running on the GPU. The host is responsible for allocating memory on both the host and device, transferring the input matrices A and B to the GPU, launching the kernel, and transferring the result matrix C back from the GPU.[^37]
+
+C++
+
+```cpp
+// Host Code Snippet  
+cudaMalloc((void\*\*)\&d\_A, size);  
+cudaMalloc((void\*\*)\&d\_B, size);  
+cudaMalloc((void\*\*)\&d\_C, size);  
+cudaMemcpy(d\_A, h\_A, size, cudaMemcpyHostToDevice);  
+cudaMemcpy(d\_B, h\_B, size, cudaMemcpyHostToDevice);
+
+dim3 threadsPerBlock(16, 16);  
+dim3 numBlocks(N / 16, N / 16);  
+matrixMulKernel\<\<\<numBlocks, threadsPerBlock\>\>\>(d\_A, d\_B, d\_C, N);
+
+cudaMemcpy(h\_C, d\_C, size, cudaMemcpyDeviceToHost);
+
+// Device (Kernel) Code  
+\_\_global\_\_ void matrixMulKernel(float\* A, float\* B, float\* C, int N) {  
+    int row \= blockIdx.y \* blockDim.y \+ threadIdx.y;  
+    int col \= blockIdx.x \* blockDim.x \+ threadIdx.x;
+
+    if (row \< N && col \< N) {  
+        float sum \= 0.0f;  
+        for (int k \= 0; k \< N; k++) {  
+            sum \+= A\[row \* N \+ k\] \* B\[k \* N \+ col\];  
+        }  
+        C\[row \* N \+ col\] \= sum;  
+    }  
+}
+```
+
+#### **Logical-to-Physical Mapping**
+
+The CUDA mapping is hierarchical and explicitly defined by the programmer, translating directly to GPU hardware structures [^72]:
+
+1.  **Grid, Blocks, and Threads:** The programmer organizes the computation into a **Grid** of **Thread Blocks**. In this case, a 2D grid of 2D blocks is natural. Each thread is assigned the task of computing a single element of the output matrix C.[^38]
+2.  **Block-to-SM Mapping:** The CUDA runtime is responsible for distributing the Thread Blocks from the grid onto the GPU's **Streaming Multiprocessors (SMs)**. An SM is the core processing unit of the GPU. Multiple blocks can be resident on a single SM at a time, and the runtime schedules them for execution as resources become available.[^37]
+3.  **Thread-to-Warp-to-Core Mapping:** Within an SM, threads are grouped by the hardware into **Warps** (typically 32 threads).[^37] The SM's **Warp Scheduler** is the key to its efficiency. It selects a warp whose threads are ready to execute and issues their next instruction to the SM's CUDA cores. The execution model is **Single Instruction, Multiple Thread (SIMT)**: all 32 threads in a warp execute the same instruction at the same time, but on different data.[^37] If a warp must wait for a slow memory access, the scheduler can instantly switch to another resident warp, hiding the memory latency and keeping the computational units busy.
+
+#### **Hardware Considerations in Execution**
+
+The GPU's performance is inextricably linked to its explicit and non-uniform memory hierarchy. Unlike the CPU, which tries to hide this complexity, the GPU exposes it to the programmer, who must manage it skillfully to achieve high performance.
+
+*   **The GPU Memory Hierarchy:** A thread has access to several distinct memory spaces.[^37] It has its own private, ultra-fast **registers**. Threads within the same block can communicate and share data through a fast, on-chip **shared memory**, which acts as a programmer-managed cache. All threads across all blocks can access the large but high-latency **global memory** (the device's DRAM).[^36]
+*   **Optimization via Tiling:** The naive kernel shown above is highly inefficient because each thread makes many accesses to slow global memory. The standard high-performance solution is a **tiled** or **blocked** algorithm.[^38] In this approach, a thread block cooperatively loads small sub-matrices (tiles) of A and B from global memory into the fast shared memory. Then, all threads in the block perform the necessary multiplications for their output element using data exclusively from shared memory. This strategy drastically reduces global memory traffic—the primary performance bottleneck—by maximizing data reuse within the SM's fastest memory space.[^38] Effective CUDA programming is, in large part, the art of structuring algorithms to maximize computation on data held in registers and shared memory while minimizing global memory access.
+
+### **9.3.4 Synthesis: Contrasting CPU and GPU Mapping**
+
+The parallelization of matrix multiplication on a CPU versus a GPU reveals fundamental differences in their architectural philosophies. The CPU is optimized for low latency on a few complex tasks, while the GPU is optimized for high throughput on many simple tasks. This leads to entirely different mapping strategies, memory considerations, and optimization goals.
+
+*   **Unit of Parallelism:** On the CPU, the primary unit of parallelism is a heavyweight **thread**, managed by the OS and runtime. A small number of these threads are mapped to powerful cores. On the GPU, the fundamental unit is a massive number of lightweight **threads**, which are managed in hardware as **warps**.
+*   **Scheduling:** The CPU relies on a complex, software-based scheduler (in the OS and runtime) that can perform sophisticated operations like preemption and work-stealing to ensure fairness and balance load. The GPU uses a simpler, hardware-based warp scheduler whose primary goal is to hide memory latency by rapidly switching between a large pool of available warps.
+*   **Memory Philosophy:** The CPU architecture invests significant hardware complexity (large caches, sophisticated coherence protocols) to present the programmer with the simple illusion of a uniform, coherent shared memory space. The GPU architecture largely abandons this illusion, exposing its physical memory hierarchy to the programmer and demanding explicit data management to achieve performance.
+
+These profound differences underscore the insight that an algorithm optimized for one architecture can be deeply inefficient on another. The "best" way to parallelize a problem is not a universal truth but a specific answer to the question: "What is the most effective way to map this computation onto the resources and constraints of this particular hardware?"
+
+| Feature | Multi-Core CPU (with OpenMP) | Many-Core GPU (with CUDA) |
+| :--- | :--- | :--- |
+| **Programming Construct** | \#pragma omp parallel for | \_\_global\_\_ kernel launch \<\<\<...\>\>\> |
+| **Logical Parallel Unit** | Loop Iteration (e.g., a matrix row) | Single Data Element (e.g., a matrix cell) |
+| **Physical Execution Unit** | OS Thread mapped to a CPU Core | CUDA Thread, executed in a Warp of 32 |
+| **Scheduling** | OS/Runtime scheduler (preemptive, work-stealing possible) | Hardware Warp Scheduler (non-preemptive, latency hiding) |
+| **Key Memory Challenge** | Cache Coherence (MESI), NUMA locality | Global Memory Latency |
+| **Optimization Goal** | Maximize cache hits, ensure NUMA-local access | Maximize use of Shared Memory, minimize global memory access |
+
+## References
+[^1]: Models for Parallel Computing : Review and Perspectives \- Semantic Scholar, accessed October 7, 2025, [https://www.semanticscholar.org/paper/Models-for-Parallel-Computing-%3A-Review-and-Kessler-Keller/c924481fbb05bb807920c8f3f2f4d9234c9f1c29](https://www.semanticscholar.org/paper/Models-for-Parallel-Computing-%3A-Review-and-Kessler-Keller/c924481fbb05bb807920c8f3f2f4d9234c9f1c29)
+[^2]: Shared Versus Distributed Memory Multiprocessors \- ECMWF, accessed October 7, 2025, [https://www.ecmwf.int/sites/default/files/elibrary/1990/10302-shared-versus-distributed-memory-multiprocessors.pdf](https://www.ecmwf.int/sites/default/files/elibrary/1990/10302-shared-versus-distributed-memory-multiprocessors.pdf)
+[^3]: Distributed memory \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Distributed\_memory](https://en.wikipedia.org/wiki/Distributed_memory)
+[^4]: Insights on Parallel Programming Model \- Advanced Millennium Technologies, accessed October 7, 2025, [https://blog.amt.in/index.php/2023/01/17/insights-on-parallel-programming-model/](https://blog.amt.in/index.php/2023/01/17/insights-on-parallel-programming-model/)
+[^5]: How Parallel Processing Shaped Modern Computing \- CelerData, accessed October 7, 2025, [https://celerdata.com/glossary/how-parallel-processing-shaped-modern-computing](https://celerdata.com/glossary/how-parallel-processing-shaped-modern-computing)
+[^6]: Parallel programming model \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Parallel\_programming\_model](https://en.wikipedia.org/wiki/Parallel_programming_model)
+[^7]: The Evolution of Parallel Programming | by Tiwariabhinav | Medium, accessed October 7, 2025, [https://medium.com/@tiwariabhinav424/the-evolution-of-parallel-programming-d80665066b88](https://medium.com/@tiwariabhinav424/the-evolution-of-parallel-programming-d80665066b88)
+[^8]: Introduction to Parallel Computing Tutorial \- | HPC @ LLNL, accessed October 7, 2025, [https://hpc.llnl.gov/documentation/tutorials/introduction-parallel-computing-tutorial](https://hpc.llnl.gov/documentation/tutorials/introduction-parallel-computing-tutorial)
+[^9]: Multithreaded Programming (POSIX pthreads Tutorial) \- randu.org, accessed October 7, 2025, [https://randu.org/tutorials/threads/](https://randu.org/tutorials/threads/)
+[^10]: Parallel Computing at a Glance, accessed October 7, 2025, [http://www.buyya.com/microkernel/chap1.pdf](http://www.buyya.com/microkernel/chap1.pdf)
+[^11]: Data Parallel, Task Parallel, and Agent Actor Architectures \- bytewax, accessed October 7, 2025, [https://bytewax.io/blog/data-parallel-task-parallel-and-agent-actor-architectures](https://bytewax.io/blog/data-parallel-task-parallel-and-agent-actor-architectures)
+[^12]: Scalable Parallel Processing: Architectural Models, Real-Time Programming, and Performance Evaluation \- MDPI, accessed October 7, 2025, [https://www.mdpi.com/2673-4591/104/1/60](https://www.mdpi.com/2673-4591/104/1/60)
+[^13]: Task parallelism \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Task\_parallelism](https://en.wikipedia.org/wiki/Task_parallelism)
+[^14]: Parallel computing \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Parallel\_computing](https://en.wikipedia.org/wiki/Parallel_computing)
+[^15]: What is a good example for task parallelismn in data processing? \- Stack Overflow, accessed October 7, 2025, [https://stackoverflow.com/questions/54072224/what-is-a-good-example-for-task-parallelismn-in-data-processing](https://stackoverflow.com/questions/54072224/what-is-a-good-example-for-task-parallelismn-in-data-processing)
+[^16]: Using OpenMP with C — Research Computing University of ..., accessed October 7, 2025, [https://curc.readthedocs.io/en/latest/programming/OpenMP-C.html](https://curc.readthedocs.io/en/latest/programming/OpenMP-C.html)
+[^17]: C++ Examples of Parallel Programming with OpenMP, accessed October 7, 2025, [https://people.math.sc.edu/burkardt/cpp\_src/openmp/openmp.html](https://people.math.sc.edu/burkardt/cpp_src/openmp/openmp.html)
+[^18]: An introduction to OpenMP \- University College London, accessed October 7, 2025, [https://github-pages.ucl.ac.uk/research-computing-with-cpp/08openmp/02\_intro\_openmp.html](https://github-pages.ucl.ac.uk/research-computing-with-cpp/08openmp/02_intro_openmp.html)
+[^19]: OpenMP Tutorial \- Scalable Parallel Computing Lab, accessed October 7, 2025, [https://spcl.inf.ethz.ch/Teaching/2014-dphpc/assignments/openmp-tutorial.pdf](https://spcl.inf.ethz.ch/Teaching/2014-dphpc/assignments/openmp-tutorial.pdf)
+[^20]: C++ Tutorial: Multi-Threaded Programming \- C++ Class Thread for Pthreads \- 2020 \- BogoToBogo, accessed October 7, 2025, [https://www.bogotobogo.com/cplusplus/multithreading\_pthread.php](https://www.bogotobogo.com/cplusplus/multithreading_pthread.php)
+[^21]: Linux Tutorial: POSIX Threads, accessed October 7, 2025, [https://www.cs.cmu.edu/afs/cs/academic/class/15492-f07/www/pthreads.html](https://www.cs.cmu.edu/afs/cs/academic/class/15492-f07/www/pthreads.html)
+[^22]: Getting Started with Intel® Threading Building Blocks (Intel® TBB), accessed October 7, 2025, [https://www.intel.com/content/www/us/en/developer/articles/guide/get-started-with-tbb.html](https://www.intel.com/content/www/us/en/developer/articles/guide/get-started-with-tbb.html)
+[^23]: Threading Building Blocks \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Threading\_Building\_Blocks](https://en.wikipedia.org/wiki/Threading_Building_Blocks)
+[^24]: Introduction to the Intel Threading Building Blocks — mcs572 0.7.8 documentation, accessed October 7, 2025, [http://homepages.math.uic.edu/\~jan/mcs572f16/mcs572notes/lec11.html](http://homepages.math.uic.edu/~jan/mcs572f16/mcs572notes/lec11.html)
+[^25]: Threading Building Blocks \- Tools \- EBRAINS, accessed October 7, 2025, [https://www.ebrains.eu/tools/threading-building-blocks](https://www.ebrains.eu/tools/threading-building-blocks)
+[^26]: TBB Tutorial \- cs.wisc.edu, accessed October 7, 2025, [https://pages.cs.wisc.edu/\~gibson/tbbTutorial.html](https://pages.cs.wisc.edu/~gibson/tbbTutorial.html)
+[^27]: Introducing Intel Tbb \- Agenda INFN, accessed October 7, 2025, [https://agenda.infn.it/event/4107/contributions/50346/attachments/35473/41878/Tbb\_Introduction.pdf](https://agenda.infn.it/event/4107/contributions/50346/attachments/35473/41878/Tbb_Introduction.pdf)
+[^28]: Intel(R) Threading Building Blocks Getting Started Guide, accessed October 7, 2025, [http://www.physics.ntua.gr/\~konstant/HetCluster/intel12.1/tbb/Getting\_Started.pdf](http://www.physics.ntua.gr/~konstant/HetCluster/intel12.1/tbb/Getting_Started.pdf)
+[^29]: Work stealing \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Work\_stealing](https://en.wikipedia.org/wiki/Work_stealing)
+[^30]: Towards Efficient HPC: Exploring Overlap Strategies Using MPI Non ..., accessed October 7, 2025, [https://www.mdpi.com/2227-7390/13/11/1848](https://www.mdpi.com/2227-7390/13/11/1848)
+[^31]: Tutorials · MPI Tutorial, accessed October 7, 2025, [https://mpitutorial.com/tutorials/](https://mpitutorial.com/tutorials/)
+[^32]: MPI Tutorial – Part 1, accessed October 7, 2025, [https://spcl.inf.ethz.ch/Teaching/2017-dphpc/recitation/mpi1.pdf](https://spcl.inf.ethz.ch/Teaching/2017-dphpc/recitation/mpi1.pdf)
+[^33]: Using MPI with C \- CU Research Computing User Guide, accessed October 7, 2025, [https://curc.readthedocs.io/en/latest/programming/MPI-C.html](https://curc.readthedocs.io/en/latest/programming/MPI-C.html)
+[^34]: (PDF) Review of Architecture and Model for Parallel Programming \- ResearchGate, accessed October 7, 2025, [https://www.researchgate.net/publication/372822306\_Review\_of\_Architecture\_and\_Model\_for\_Parallel\_Programming](https://www.researchgate.net/publication/372822306_Review_of_Architecture_and_Model_for_Parallel_Programming)
+[^35]: mikeroyal/CUDA-Guide \- GitHub, accessed October 7, 2025, [https://github.com/mikeroyal/CUDA-Guide](https://github.com/mikeroyal/CUDA-Guide)
+[^36]: CUDA C++ Programming Guide | NVIDIA Docs, accessed October 7, 2025, [https://docs.nvidia.com/cuda/pdf/CUDA\_C\_Programming\_Guide.pdf](https://docs.nvidia.com/cuda/pdf/CUDA_C_Programming_Guide.pdf)
+[^37]: CUDA Programming Guide: An Overview | by Zia Babar | Aug, 2025 \- Medium, accessed October 7, 2025, [https://medium.com/@zbabar/cuda-programming-guide-an-overview-84be487cb5a8](https://medium.com/@zbabar/cuda-programming-guide-an-overview-84be487cb5a8)
+[^38]: Matrix Multiplication in CUDA \- Harshit Kumar, accessed October 7, 2025, [https://kharshit.github.io/blog/2024/06/07/matrix-multiplication-cuda](https://kharshit.github.io/blog/2024/06/07/matrix-multiplication-cuda)
+[^39]: What is NVIDIA CUDA? What can it do for Deep Learning? \- Exxact Corporation, accessed October 7, 2025, [https://www.exxactcorp.com/blog/Deep-Learning/NVIDIA-CUDA-in-AI-Deep-Learning](https://www.exxactcorp.com/blog/Deep-Learning/NVIDIA-CUDA-in-AI-Deep-Learning)
+[^40]: OpenCL \- The Open Standard for Parallel Programming of ..., accessed October 7, 2025, [https://www.khronos.org/opencl/](https://www.khronos.org/opencl/)
+[^41]: An introduction to OpenCL \- Purdue Engineering, accessed October 7, 2025, [https://engineering.purdue.edu/\~smidkiff/ece563/NVidiaGPUTeachingToolkit/Mod20OpenCL/3rd-Edition-AppendixA-intro-to-OpenCL.pdf](https://engineering.purdue.edu/~smidkiff/ece563/NVidiaGPUTeachingToolkit/Mod20OpenCL/3rd-Edition-AppendixA-intro-to-OpenCL.pdf)
+[^42]: OpenCL \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/OpenCL](https://en.wikipedia.org/wiki/OpenCL)
+[^43]: OpenCL execution model \- Arm Developer, accessed October 7, 2025, [https://developer.arm.com/documentation/dui0538/e/opencl-concepts/opencl-execution-model](https://developer.arm.com/documentation/dui0538/e/opencl-concepts/opencl-execution-model)
+[^44]: The OpenCL™ C Specification, accessed October 7, 2025, [https://bashbaug.github.io/OpenCL-Docs/pdf/OpenCL\_C.pdf](https://bashbaug.github.io/OpenCL-Docs/pdf/OpenCL_C.pdf)
+[^45]: The OpenCL Specification \- IC-Unicamp, accessed October 7, 2025, [https://www.ic.unicamp.br/\~edson/disciplinas/mo802/2016-1s/anexos/opencl-1.2.pdf](https://www.ic.unicamp.br/~edson/disciplinas/mo802/2016-1s/anexos/opencl-1.2.pdf)
+[^46]: Heterogeneous programming with SYCL documentation, accessed October 7, 2025, [https://enccs.github.io/sycl-workshop/](https://enccs.github.io/sycl-workshop/)
+[^47]: Getting Started \- SYCL.tech, accessed October 7, 2025, [https://sycl.tech/getting-started/](https://sycl.tech/getting-started/)
+[^48]: Compiler for Parallel Machines. Parallel computing is an approach ..., accessed October 7, 2025, [https://medium.com/@omkar.patil20/compiler-for-parallel-machines-9df80e04d6bf](https://medium.com/@omkar.patil20/compiler-for-parallel-machines-9df80e04d6bf)
+[^49]: The Nexus Task-parallel Runtime System, accessed October 7, 2025, [https://marketing.globuscs.info/production/strapi/uploads/india\_paper\_ps\_40c2982c84.pdf](https://marketing.globuscs.info/production/strapi/uploads/india_paper_ps_40c2982c84.pdf)
+[^50]: medium.com, accessed October 7, 2025, [https://medium.com/@omkar.patil20/compiler-for-parallel-machines-9df80e04d6bf\#:\~:text=Compilers%20play%20a%20crucial%20role,capabilities%20of%20the%20target%20machine.](https://medium.com/@omkar.patil20/compiler-for-parallel-machines-9df80e04d6bf#:~:text=Compilers%20play%20a%20crucial%20role,capabilities%20of%20the%20target%20machine.)
+[^51]: en.wikipedia.org, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Automatic\_parallelization\_tool\#:\~:text=Intel%20C%2B%2B%20compiler,-The%20auto%2Dparallelization\&text=Automatic%20parallelization%20determines%20the%20loops,in%20programming%20with%20OpenMP%20directives.](https://en.wikipedia.org/wiki/Automatic_parallelization_tool#:~:text=Intel%20C%2B%2B%20compiler,-The%20auto%2Dparallelization&text=Automatic%20parallelization%20determines%20the%20loops,in%20programming%20with%20OpenMP%20directives.)
+[^52]: Auto-parallelization Overview, accessed October 7, 2025, [https://www.cita.utoronto.ca/\~merz/intel\_c10b/main\_cls/mergedProjects/optaps\_cls/common/optaps\_qpar\_par.htm](https://www.cita.utoronto.ca/~merz/intel_c10b/main_cls/mergedProjects/optaps_cls/common/optaps_qpar_par.htm)
+[^53]: Compilers for Parallel Machines: A User-Friendly Guide | by Pranay Junghare | Medium, accessed October 7, 2025, [https://medium.com/@jungharepranay1509/compilers-for-parallel-machines-a-user-friendly-guide-0dd45ca6a9f6](https://medium.com/@jungharepranay1509/compilers-for-parallel-machines-a-user-friendly-guide-0dd45ca6a9f6)
+[^54]: Pragma directives for OpenMP parallelization \- IBM, accessed October 7, 2025, [https://www.ibm.com/docs/en/xl-c-and-cpp-linux/16.1.1?topic=reference-pragma-directives-openmp-parallelization](https://www.ibm.com/docs/en/xl-c-and-cpp-linux/16.1.1?topic=reference-pragma-directives-openmp-parallelization)
+[^55]: Directive Format \- OpenMP, accessed October 7, 2025, [https://www.openmp.org/spec-html/5.1/openmpse9.html](https://www.openmp.org/spec-html/5.1/openmpse9.html)
+[^56]: What is parallel computing? \- IBM, accessed October 7, 2025, [https://www.ibm.com/think/topics/parallel-computing](https://www.ibm.com/think/topics/parallel-computing)
+[^57]: Parallel Programming Models, Languages and Compilers \- csenotes, accessed October 7, 2025, [https://csenotes.github.io/pdf/mod5\_aca.pdf](https://csenotes.github.io/pdf/mod5_aca.pdf)
+[^58]: (PDF) A Comparative Study and Evaluation of Parallel Programming ..., accessed October 7, 2025, [https://www.researchgate.net/publication/255791855\_A\_Comparative\_Study\_and\_Evaluation\_of\_Parallel\_Programming\_Models\_for\_Shared-Memory\_Parallel\_Architectures](https://www.researchgate.net/publication/255791855_A_Comparative_Study_and_Evaluation_of_Parallel_Programming_Models_for_Shared-Memory_Parallel_Architectures)
+[^59]: Scheduling Multithreaded Computations by Work Stealing, accessed October 7, 2025, [https://www.csd.uwo.ca/\~mmorenom/CS433-CS9624/Resources/Scheduling\_multithreaded\_computations\_by\_work\_stealing.pdf](https://www.csd.uwo.ca/~mmorenom/CS433-CS9624/Resources/Scheduling_multithreaded_computations_by_work_stealing.pdf)
+[^60]: Parallel Programming With OpenMP In C++ \- Matrix Multiplication ..., accessed October 7, 2025, [https://www.c-sharpcorner.com/article/parallel-programming-with-openmp-in-cpp-matrix-multiplication-example/](https://www.c-sharpcorner.com/article/parallel-programming-with-openmp-in-cpp-matrix-multiplication-example/)
+[^61]: 5.2 Matrix Multiplication — Parallel Computing for Beginners \- Free Hands-On Materials for Learning PDC, accessed October 7, 2025, [https://www.learnpdc.org/PDCBeginners/5-applications/matrix-multiply.html](https://www.learnpdc.org/PDCBeginners/5-applications/matrix-multiply.html)
+[^62]: Parallelized Blocked Matrix Multiplication using OpenMP | by Charith Pietersz \- Medium, accessed October 7, 2025, [https://medium.com/@cj.ptsz/parallelized-blocked-matrix-multiplication-using-openmp-97a4bc620a47](https://medium.com/@cj.ptsz/parallelized-blocked-matrix-multiplication-using-openmp-97a4bc620a47)
+[^63]: OpenMP and cores/threads \- c++ \- Stack Overflow, accessed October 7, 2025, [https://stackoverflow.com/questions/9292191/openmp-and-cores-threads](https://stackoverflow.com/questions/9292191/openmp-and-cores-threads)
+[^64]: OpenMP thread mapping to physical cores \- Stack Overflow, accessed October 7, 2025, [https://stackoverflow.com/questions/4717251/openmp-thread-mapping-to-physical-cores](https://stackoverflow.com/questions/4717251/openmp-thread-mapping-to-physical-cores)
+[^65]: Processor Affinity for OpenMP and MPI » ADMIN Magazine, accessed October 7, 2025, [https://www.admin-magazine.com/HPC/Articles/Processor-Affinity-for-OpenMP-and-MPI](https://www.admin-magazine.com/HPC/Articles/Processor-Affinity-for-OpenMP-and-MPI)
+[^66]: How do I control threads and CPUs on Ookami using OpenMP? \- Stony Brook University, accessed October 7, 2025, [https://www.stonybrook.edu/commcms/ookami/support/faq/thread\_binding](https://www.stonybrook.edu/commcms/ookami/support/faq/thread_binding)
+[^67]: Multicore processors and cache coherence | Intro to Computer Architecture Class Notes, accessed October 7, 2025, [https://fiveable.me/introduction-computer-architecture/unit-7/multicore-processors-cache-coherence/study-guide/0Fr1h83bSS0NcUMH](https://fiveable.me/introduction-computer-architecture/unit-7/multicore-processors-cache-coherence/study-guide/0Fr1h83bSS0NcUMH)
+[^68]: Cache Coherence: How the MESI Protocol Keeps Multi-Core CPUs ..., accessed October 7, 2025, [https://dev.to/sachin\_tolay\_052a7e539e57/cache-coherence-how-the-mesi-protocol-keeps-multi-core-cpus-consistent-170j](https://dev.to/sachin_tolay_052a7e539e57/cache-coherence-how-the-mesi-protocol-keeps-multi-core-cpus-consistent-170j)
+[^69]: Non-uniform memory access \- Wikipedia, accessed October 7, 2025, [https://en.wikipedia.org/wiki/Non-uniform\_memory\_access](https://en.wikipedia.org/wiki/Non-uniform_memory_access)
+[^70]: Improving Parallel System Performance with a NUMA-aware Load Balancer \- IDEALS, accessed October 7, 2025, [https://www.ideals.illinois.edu/items/26080/bitstreams/89289/object?dl=1](https://www.ideals.illinois.edu/items/26080/bitstreams/89289/object?dl=1)
+[^71]: Mysteries of NUMA Memory Management Revealed \- Red Hat, accessed October 7, 2025, [https://www.redhat.com/en/blog/mysteries-numa-memory-management-revealed](https://www.redhat.com/en/blog/mysteries-numa-memory-management-revealed)
+[^72]: CUDA C++ Programming Guide \- NVIDIA Docs, accessed October 7, 2025, [https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html\#hardware-implementation](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#hardware-implementation)
+[^73]: Matrix Multiplication in CUDA — A Simple Guide | by Charitha Saumya | Analytics Vidhya, accessed October 7, 2025, [https://medium.com/analytics-vidhya/matrix-multiplication-in-cuda-a-simple-guide-bab44bc1f8ab](https://medium.com/analytics-vidhya/matrix-multiplication-in-cuda-a-simple-guide-bab44bc1f8ab)
+[^74]: MatrixMul sample \- CUDA Programming and Performance \- NVIDIA Developer Forums, accessed October 7, 2025, [https://forums.developer.nvidia.com/t/matrixmul-sample/58025](https://forums.developer.nvidia.com/t/matrixmul-sample/58025)
