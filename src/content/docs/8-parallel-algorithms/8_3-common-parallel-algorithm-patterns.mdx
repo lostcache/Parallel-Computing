@@ -1,8 +1,149 @@
 ---
-title: "7.3 Common Parallel Algorithm Patterns"
+title: "8.3 Common Parallel Algorithm Patterns"
 description: "Fundamental patterns and templates for designing efficient parallel algorithms."
 ---
 
-# 7.3 Common Parallel Algorithm Patterns
+While data and task parallelism provide high-level strategic direction, parallel algorithm patterns offer concrete, reusable templates for structuring parallel programs. These patterns encapsulate common computational structures and communication schemes, providing a higher level of abstraction than raw threads or message-passing calls and simplifying the development of efficient and scalable solutions.36 Three of the most influential patterns are MapReduce, Fork/Join, and Pipeline.
 
-Content for this section is coming soon.
+### **The MapReduce Pattern**
+
+MapReduce is a highly structured data-parallel programming model popularized by Google for processing and generating massive datasets on large, distributed clusters of commodity hardware.43 The pattern abstracts the complex details of distributed computing—parallelization, data distribution, fault tolerance, and load balancing—into a simple interface centered on two user-defined functions: Map and Reduce.45
+
+#### **Operational Flow**
+
+The MapReduce workflow proceeds through a sequence of well-defined stages, managed entirely by the framework 43:
+
+1. **Input Splitting:** The input data, typically stored in a distributed file system like HDFS, is partitioned into smaller, independent chunks called "splits."  
+2. **Map Phase:** The framework spawns many "Map" tasks in parallel. Each Map task reads one split of the input data and applies the user-defined Map function to it. The purpose of the Map function is to process the data and emit a set of intermediate key-value pairs. For the classic "word count" example, the Map function would read a line of text and emit a (word, 1) pair for each word it encounters.47  
+3. **Shuffle and Sort Phase:** This is the critical communication stage of the pattern. The framework collects all intermediate key-value pairs from all Map tasks and sorts them based on the key. It then groups all values associated with the same key and delivers them to a single Reduce task. For word count, all (word, 1) pairs for a specific "word" are collected and sent to the same reducer as (word, [1, 1, 1,...]).43  
+4. **Reduce Phase:** The framework spawns a set of "Reduce" tasks. Each Reduce task receives the grouped key-value lists from the shuffle phase and applies the user-defined Reduce function. This function's job is to aggregate, summarize, or transform the list of values to produce a final output. For word count, the Reduce function simply sums the list of ones to get the total count for that word.46  
+5. **Final Result:** The output from all Reduce tasks is collected and written back to the distributed file system, forming the final result of the computation.
+
+The power of MapReduce lies in its scalability and fault tolerance. By abstracting away the complexities of distributed execution, it allows programmers to focus solely on the Map and Reduce logic, while the framework handles the distribution of work and recovery from node failures by re-executing tasks.45
+
+### **The Fork/Join Pattern**
+
+The Fork/Join pattern is a task-parallel model that provides a structured approach to implementing divide-and-conquer algorithms on shared-memory multi-core systems.49 It is designed to efficiently exploit parallelism in problems that can be recursively broken down into smaller, independent sub-problems.
+
+#### **Mechanics**
+
+The pattern's execution flow mirrors the recursive nature of divide-and-conquer algorithms 51:
+
+1. **Fork:** A large task first checks if it is small enough to be solved directly (sequentially). This size is determined by a threshold. If the task is too large, it is "forked" by splitting it into two or more smaller, independent sub-tasks. These new sub-tasks are then scheduled for execution in parallel.  
+2. **Recursive Decomposition:** The sub-tasks themselves follow the same logic, recursively forking into even smaller tasks until they are below the threshold.  
+3. **Join:** Once a task has forked its sub-tasks, it waits for them to complete. The join operation blocks the parent task until the results of its children are available. The parent then combines the results from its children to produce its own result.
+
+A key implementation detail that makes the Fork/Join pattern efficient is its use of a **work-stealing scheduler**.52 A fixed-size pool of worker threads is created (typically one per CPU core). Each thread maintains its own double-ended queue (deque) of tasks. When a thread forks a new task, it places it on its own deque. When a thread's deque becomes empty, it becomes a "thief" and attempts to "steal" a task from the tail of another thread's deque. This mechanism provides automatic and dynamic load balancing, ensuring that all cores remain busy as long as there is work to be done.53 This pattern is well-suited for problems like parallel merge sort, quicksort, and certain types of image processing like applying a blur filter recursively.50
+
+### **The Pipeline Pattern**
+
+The Pipeline pattern is a form of task parallelism modeled after a physical assembly line. It is used when a computation can be broken down into a sequence of distinct, independent stages, where the output of one stage becomes the input for the next.39
+
+#### **Components and Flow**
+
+A pipeline consists of three main components 55:
+
+1. **Source:** The entry point that produces or reads a stream of data items to be processed.  
+2. **Stages:** A series of processing units, where each stage performs a specific operation on a data item.  
+3. **Sink:** The exit point that consumes the final processed data items.
+
+Parallelism is achieved through temporal concurrency. While Stage 1 is processing data item i+1, Stage 2 can simultaneously process data item i, and Stage 3 can process item i-1. After an initial "fill" period, all stages of the pipeline can be active at once, each working on a different data item.54 This structure is ideal for increasing the **throughput** (the rate at which data items are processed) of a system, though it does not necessarily reduce the **latency** (the time it takes for a single data item to pass through the entire pipeline).  
+The performance of a pipeline is limited by its slowest stage, which acts as a bottleneck and determines the overall throughput.54 The pattern is widely used in many areas, including CPU instruction execution (the classic fetch-decode-execute-memory-writeback pipeline), signal and image processing (where a stream of data passes through a series of filters), data streaming analytics, and the stages of a compiler (lexical analysis --> parsing --> semantic analysis --> code generation).30  
+These patterns are not merely implementation choices; they are formalisms that express different fundamental dependency structures. MapReduce is ideal for problems with embarrassingly parallel tasks followed by a single, massive aggregation—a bulk-synchronous dependency model. The Pipeline pattern is suited for problems with a strict, linear dependency graph, where data flows sequentially through stages. The Fork/Join pattern is designed for problems with a recursive, hierarchical dependency graph, typical of divide-and-conquer algorithms. Furthermore, these patterns are deeply connected to the hardware architectures they were designed for. MapReduce is a pattern for large-scale, fault-tolerant distributed computing across clusters of machines.44 Fork/Join is a pattern for shared-memory multi-core computing, optimized to keep a fixed set of cores busy.50 The Pipeline pattern is more general, applicable to both environments, but is fundamentally about optimizing throughput rather than minimizing the latency of a single task.
+
+## References
+
+[^1]: Introduction to Parallel Computing Tutorial – | HPC @ LLNL, accessed October 6, 2025, [https://hpc.llnl.gov/documentation/tutorials/introduction-parallel-computing-tutorial](https://hpc.llnl.gov/documentation/tutorials/introduction-parallel-computing-tutorial)  
+[^2]: parallel-computational-models.pdf, accessed October 6, 2025, [https://www.ijcsma.com/articles/parallel-computational-models.pdf](https://www.ijcsma.com/articles/parallel-computational-models.pdf)  
+[^3]: Models for Parallel Computing: Review and Perspectives – IDA.LiU.SE, accessed October 6, 2025, [https://www.ida.liu.se/~chrke55/papers/modelsurvey.pdf](https://www.ida.liu.se/~chrke55/papers/modelsurvey.pdf)  
+[^4]: Parallel algorithms in shared memory – Thomas Ropars, accessed October 6, 2025, [https://tropars.github.io/downloads/lectures/PAP/pap_3_shared_memory_algos.pdf](https://tropars.github.io/downloads/lectures/PAP/pap_3_shared_memory_algos.pdf)  
+[^5]: PRAM or Parallel Random Access Machines – GeeksforGeeks, accessed October 6, 2025, [https://www.geeksforgeeks.org/computer-organization-architecture/pram-or-parallel-random-access-machines/](https://www.geeksforgeeks.org/computer-organization-architecture/pram-or-parallel-random-access-machines/)  
+[^6]: COMP 633: Parallel Computing PRAM Algorithms, accessed October 6, 2025, [https://www.cs.unc.edu/~prins/Classes/633/Readings/pram.pdf](https://www.cs.unc.edu/~prins/Classes/633/Readings/pram.pdf)  
+[^7]: Parallel Random-Access Machines – Computer Science, UWO, accessed October 6, 2025, [https://www.csd.uwo.ca/~mmorenom/HPC-Slides/The_PRAM_model.pdf](https://www.csd.uwo.ca/~mmorenom/HPC-Slides/The_PRAM_model.pdf)  
+[^8]: A Survey of Parallel Algorithms for Shared-Memory Machines, accessed October 6, 2025, [https://www2.eecs.berkeley.edu/Pubs/TechRpts/1988/CSD-88-408.pdf](https://www2.eecs.berkeley.edu/Pubs/TechRpts/1988/CSD-88-408.pdf)  
+[^9]: A survey of parallel algorithms for shared-memory machines (Book) | OSTI.GOV, accessed October 6, 2025, [https://www.osti.gov/biblio/5805553](https://www.osti.gov/biblio/5805553)  
+[^10]: Parallel Computation Models – Rice University, accessed October 6, 2025, [https://www.cs.rice.edu/~vs3/comp422/lecture-notes/comp422-lec20-s08-v1.pdf](https://www.cs.rice.edu/~vs3/comp422/lecture-notes/comp422-lec20-s08-v1.pdf)  
+[^11]: Parallel RAM – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Parallel_RAM](https://en.wikipedia.org/wiki/Parallel_RAM)  
+[^12]: Section \#2: PRAM models (CS838: Topics in parallel computing, CS1221, Thu, Jan 21, 1999, 8:00-9:15 am) Pavel Tvrdik – cs.wisc.edu, accessed October 6, 2025, [https://pages.cs.wisc.edu/~tvrdik/2/html/Section2.html](https://pages.cs.wisc.edu/~tvrdik/2/html/Section2.html)  
+[^13]: Introduction to Parallel Algorithms – Computer Engineering Group, accessed October 6, 2025, [https://www.eecg.toronto.edu/~ece1762/hw/par.pdf](https://www.eecg.toronto.edu/~ece1762/hw/par.pdf)  
+[^14]: LogP: Towards a realistic Model of Parallel Computation, accessed October 6, 2025, [https://users.cs.utah.edu/~kirby/classes/cs6230/CullerSlides.pdf](https://users.cs.utah.edu/~kirby/classes/cs6230/CullerSlides.pdf)  
+[^15]: Bulk synchronous parallel – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Bulk_synchronous_parallel](https://en.wikipedia.org/wiki/Bulk_synchronous_parallel)  
+[^16]: Bulk Synchronous Parallel – HClib-Actor Documentation, accessed October 6, 2025, [https://hclib-actor.com/background/bsp/](https://hclib-actor.com/background/bsp/)  
+[^17]: RAM, PRAM, and LogP models, accessed October 6, 2025, [https://www.cs.fsu.edu/~xyuan/cis4930-cda5125/lect23_logpbsp.ppt](https://www.cs.fsu.edu/~xyuan/cis4930-cda5125/lect23_logpbsp.ppt)  
+[^18]: BSP Tutorial – Apache Hama, accessed October 6, 2025, [https://hama.apache.org/hama_bsp_tutorial.html](https://hama.apache.org/hama_bsp_tutorial.html)  
+[^19]: BSP model – Bulk, accessed October 6, 2025, [https://jwbuurlage.github.io/Bulk/bsp/](https://jwbuurlage.github.io/Bulk/bsp/)  
+[^20]: LogP: Towards a Realistic Model of Parallel Computation | EECS at ..., accessed October 6, 2025, [https://www2.eecs.berkeley.edu/Pubs/TechRpts/1992/6262.html](https://www2.eecs.berkeley.edu/Pubs/TechRpts/1992/6262.html)  
+[^21]: LogP: Towards a realistic model of parallel computation – Illinois Experts, accessed October 6, 2025, [https://experts.illinois.edu/en/publications/logp-towards-a-realistic-model-of-parallel-computation-2](https://experts.illinois.edu/en/publications/logp-towards-a-realistic-model-of-parallel-computation-2)  
+[^22]: CS 498 Hot Topics in High Performance Computing – Torsten Hoefler, accessed October 6, 2025, [https://htor.ethz.ch/teaching/CS498/hoefler_cs498_lecture_4.pdf](https://htor.ethz.ch/teaching/CS498/hoefler_cs498_lecture_4.pdf)  
+[^23]: LogP machine – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/LogP_machine](https://en.wikipedia.org/wiki/LogP_machine)  
+[^24]: Design of Parallel and High-Performance Computing: Distributed-Memory Models and Algorithms, accessed October 6, 2025, [https://spcl.inf.ethz.ch/Teaching/2015-dphpc/lecture/lecture12-loggp](https://spcl.inf.ethz.ch/Teaching/2015-dphpc/lecture/lecture12-loggp)  
+[^25]: Lecture 26: Performance Models for Distributed Memory Parallel Computing, accessed October 6, 2025, [https://wgropp.cs.illinois.edu/courses/cs598-s15/lectures/lecture26.pdf](https://wgropp.cs.illinois.edu/courses/cs598-s15/lectures/lecture26.pdf)  
+[^26]: BSP vs LogP1 – dei.unipd.it, accessed October 6, 2025, [https://www.dei.unipd.it/~geppo/PAPERS/BSPvsLogP.pdf](https://www.dei.unipd.it/~geppo/PAPERS/BSPvsLogP.pdf)  
+[^27]: (PDF) BSP vs LogP. – ResearchGate, accessed October 6, 2025, [https://www.researchgate.net/publication/221257656_BSP_vs_LogP](https://www.researchgate.net/publication/221257656_BSP_vs_LogP)  
+[^28]: (PDF) LogP: A Practical Model of Parallel Computation. – ResearchGate, accessed October 6, 2025, [https://www.researchgate.net/publication/220420294_LogP_A_Practical_Model_of_Parallel_Computation](https://www.researchgate.net/publication/220420294_LogP_A_Practical_Model_of_Parallel_Computation)  
+[^29]: Chapter 3. Parallel Algorithm Design Methodology, accessed October 6, 2025, [https://www.cs.hunter.cuny.edu/~sweiss/course_materials/csci493.65/lecture_notes/chapter03.pdf](https://www.cs.hunter.cuny.edu/~sweiss/course_materials/csci493.65/lecture_notes/chapter03.pdf)  
+[^30]: 9.3. Parallel Design Patterns — Computer Systems Fundamentals, accessed October 6, 2025, [https://w3.cs.jmu.edu/kirkpams/OpenCSF/Books/csf/html/ParallelDesign.html](https://w3.cs.jmu.edu/kirkpams/OpenCSF/Books/csf/html/ParallelDesign.html)  
+[^31]: Parallel Algorithm Analysis and Design, accessed October 6, 2025, [https://www.math-cs.gordon.edu/courses/cps343/presentations/Parallel_Alg_Design.pdf](https://www.math-cs.gordon.edu/courses/cps343/presentations/Parallel_Alg_Design.pdf)  
+[^32]: Data parallelism – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Data_parallelism](https://en.wikipedia.org/wiki/Data_parallelism)  
+[^33]: What Is Data Parallelism? | Pure Storage, accessed October 6, 2025, [https://www.purestorage.com/knowledge/what-is-data-parallelism.html](https://www.purestorage.com/knowledge/what-is-data-parallelism.html)  
+[^34]: Parallel Algorithm – Quick Guide – Tutorials Point, accessed October 6, 2025, [https://www.tutorialspoint.com/parallel_algorithm/parallel_algorithm_quick_guide.htm](https://www.tutorialspoint.com/parallel_algorithm/parallel_algorithm_quick_guide.htm)  
+[^35]: Data parallelism vs Task parallelism – Tutorials Point, accessed October 6, 2025, [https://www.tutorialspoint.com/data-parallelism-vs-task-parallelism](https://www.tutorialspoint.com/data-parallelism-vs-task-parallelism)  
+[^36]: Parallel Algorithm Design Strategies | Parallel and Distributed Computing Class Notes | Fiveable, accessed October 6, 2025, [https://fiveable.me/parallel-and-distributed-computing/unit-6/parallel-algorithm-design-strategies/study-guide/B9NPGnrWtPEbON5O](https://fiveable.me/parallel-and-distributed-computing/unit-6/parallel-algorithm-design-strategies/study-guide/B9NPGnrWtPEbON5O)  
+[^37]: Data Parallel, Task Parallel, and Agent Actor Architectures – bytewax, accessed October 6, 2025, [https://bytewax.io/blog/data-parallel-task-parallel-and-agent-actor-architectures](https://bytewax.io/blog/data-parallel-task-parallel-and-agent-actor-architectures)  
+[^38]: Task parallelism – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Task_parallelism](https://en.wikipedia.org/wiki/Task_parallelism)  
+[^39]: Types of parallelism – Arm Immortalis and Mali GPU OpenCL Developer Guide, accessed October 6, 2025, [https://developer.arm.com/documentation/101574/latest/Parallel-processing-concepts/Types-of-parallelism](https://developer.arm.com/documentation/101574/latest/Parallel-processing-concepts/Types-of-parallelism)  
+[^40]: Data and Task Parallelism – Intel, accessed October 6, 2025, [https://www.intel.com/content/www/us/en/docs/advisor/user-guide/2023-2/data-and-task-parallelism.html](https://www.intel.com/content/www/us/en/docs/advisor/user-guide/2023-2/data-and-task-parallelism.html)  
+[^41]: Principles of Parallel Algorithm Design: Concurrency and Decomposition – Rice University, accessed October 6, 2025, [https://www.clear.rice.edu/comp422/lecture-notes/comp422-534-2020-Lecture2-ConcurrencyDecomposition.pdf](https://www.clear.rice.edu/comp422/lecture-notes/comp422-534-2020-Lecture2-ConcurrencyDecomposition.pdf)  
+[^42]: Design of Parallel Algorithms – Physics and Astronomy, accessed October 6, 2025, [http://homepage.physics.uiowa.edu/~ghowes/teach/phys5905/lect/NumLec13_Design.pdf](http://homepage.physics.uiowa.edu/~ghowes/teach/phys5905/lect/NumLec13_Design.pdf)  
+[^43]: What is MapReduce? – IBM, accessed October 6, 2025, [https://www.ibm.com/think/topics/mapreduce](https://www.ibm.com/think/topics/mapreduce)  
+[^44]: MapReduce 101: What It Is & How to Get Started | Talend, accessed October 6, 2025, [https://www.talend.com/resources/what-is-mapreduce/](https://www.talend.com/resources/what-is-mapreduce/)  
+[^45]: An Introduction to MapReduce with Map Reduce Example – Analytics Vidhya, accessed October 6, 2025, [https://www.analyticsvidhya.com/blog/2022/05/an-introduction-to-mapreduce-with-a-word-count-example/](https://www.analyticsvidhya.com/blog/2022/05/an-introduction-to-mapreduce-with-a-word-count-example/)  
+[^46]: Map Reduce and its Phases with numerical example. – GeeksforGeeks, accessed October 6, 2025, [https://www.geeksforgeeks.org/data-science/mapreduce-understanding-with-real-life-example/](https://www.geeksforgeeks.org/data-science/mapreduce-understanding-with-real-life-example/)  
+[^47]: 4.1 MapReduce — Parallel Computing for Beginners, accessed October 6, 2025, [https://www.learnpdc.org/PDCBeginners/6-furtherAvenues/mapreduce.html](https://www.learnpdc.org/PDCBeginners/6-furtherAvenues/mapreduce.html)  
+[^48]: Parallel Data Processing with Hadoop/MapReduce – UCSB Computer Science, accessed October 6, 2025, [https://sites.cs.ucsb.edu/~tyang/class/240a17/slides/CS240TopicMapReduce.pdf](https://sites.cs.ucsb.edu/~tyang/class/240a17/slides/CS240TopicMapReduce.pdf)  
+[^49]: Parallel programming: Using the Fork-Join model in Salesforce – West Monroe, accessed October 6, 2025, [https://www.westmonroe.com/insights/parallel-programming-using-the-fork-Join-model-in-salesforce](https://www.westmonroe.com/insights/parallel-programming-using-the-fork-Join-model-in-salesforce)  
+[^50]: CS 365: Lecture 13: Fork/Join Parallelism, accessed October 6, 2025, [https://ycpcs.github.io/cs365-spring2017/lectures/lecture13.html](https://ycpcs.github.io/cs365-spring2017/lectures/lecture13.html)  
+[^51]: Fork–join model – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Fork%E2%80%93join_model](https://en.wikipedia.org/wiki/Fork%E2%80%93join_model)  
+[^52]: Introduction to the Fork/Join Framework – Pluralsight, accessed October 6, 2025, [https://www.pluralsight.com/resources/blog/guides/introduction-to-the-fork-join-framework](https://www.pluralsight.com/resources/blog/guides/introduction-to-the-fork-join-framework)  
+[^53]: Fork/Join – Essential Java Classes – Oracle Help Center, accessed October 6, 2025, [https://docs.oracle.com/javase/tutorial/essential/concurrency/forkjoin.html](https://docs.oracle.com/javase/tutorial/essential/concurrency/forkjoin.html)  
+[^54]: Pipeline | Our Pattern Language, accessed October 6, 2025, [https://patterns.eecs.berkeley.edu/?page_id=542](https://patterns.eecs.berkeley.edu/?page_id=542)  
+[^55]: The Pipeline Design Pattern – Examples in C# | HackerNoon, accessed October 6, 2025, [https://hackernoon.com/the-pipeline-design-pattern-examples-in-c](https://hackernoon.com/the-pipeline-design-pattern-examples-in-c)  
+[^56]: Difference between Fork/Join and Map/Reduce – Stack Overflow, accessed October 6, 2025, [https://stackoverflow.com/questions/2538224/difference-between-fork-join-and-map-reduce](https://stackoverflow.com/questions/2538224/difference-between-fork-join-and-map-reduce)  
+[^57]: Which parallel sorting algorithm has the best average case performance? – Stack Overflow, accessed October 6, 2025, [https://stackoverflow.com/questions/3969813/which-parallel-sorting-algorithm-has-the-best-average-case-performance](https://stackoverflow.com/questions/3969813/which-parallel-sorting-algorithm-has-the-best-average-case-performance)  
+[^58]: Parallel Merge Sort – San Jose State University, accessed October 6, 2025, [https://www.sjsu.edu/people/robert.chun/courses/cs159/s3/T.pdf](https://www.sjsu.edu/people/robert.chun/courses/cs159/s3/T.pdf)  
+[^59]: Parallel Merge Sort | Zaid Humayun's Blog, accessed October 6, 2025, [https://redixhumayun.github.io/systems/2023/12/29/parallel-merge-sort.html](https://redixhumayun.github.io/systems/2023/12/29/parallel-merge-sort.html)  
+[^60]: Overview Parallel Merge Sort, accessed October 6, 2025, [https://stanford.edu/~rezab/classes/cme323/S16/notes/Lecture04/cme323_lec4.pdf](https://stanford.edu/~rezab/classes/cme323/S16/notes/Lecture04/cme323_lec4.pdf)  
+[^61]: Parallel Merge Sort Algorithm. Introduction | by Rachit Vasudeva ..., accessed October 6, 2025, [https://rachitvasudeva.medium.com/parallel-merge-sort-algorithm-e8175ab60e7](https://rachitvasudeva.medium.com/parallel-merge-sort-algorithm-e8175ab60e7)  
+[^62]: What is Bitonic sort? – Educative.io, accessed October 6, 2025, [https://www.educative.io/answers/what-is-bitonic-sort](https://www.educative.io/answers/what-is-bitonic-sort)  
+[^63]: Bitonic sorter – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Bitonic_sorter](https://en.wikipedia.org/wiki/Bitonic_sorter)  
+[^64]: Bitonic Sort – GeeksforGeeks, accessed October 6, 2025, [https://www.geeksforgeeks.org/dsa/bitonic-sort/](https://www.geeksforgeeks.org/dsa/bitonic-sort/)  
+[^65]: Samplesort – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Samplesort](https://en.wikipedia.org/wiki/Samplesort)  
+[^66]: Parallel Sample Sort using MPI, accessed October 6, 2025, [https://cse.buffalo.edu/faculty/miller/Courses/CSE702/Nicolas-Barrios-Fall-2021.pdf](https://cse.buffalo.edu/faculty/miller/Courses/CSE702/Nicolas-Barrios-Fall-2021.pdf)  
+[^67]: 12.7.4 Quicksort or Samplesort Algorithm – The Netlib, accessed October 6, 2025, [https://www.netlib.org/utk/lsi/pcwLSI/text/node302.html](https://www.netlib.org/utk/lsi/pcwLSI/text/node302.html)  
+[^68]: Comparison of parallel sorting algorithms – arXiv, accessed October 6, 2025, [https://arxiv.org/pdf/1511.03404](https://arxiv.org/pdf/1511.03404)  
+[^69]: Lecture 6: Parallel Matrix Algorithms (part 3), accessed October 6, 2025, [https://www3.nd.edu/~zxu2/acms60212-40212-S12/Lec-07-3.pdf](https://www3.nd.edu/~zxu2/acms60212-40212-S12/Lec-07-3.pdf)  
+[^70]: Matrix multiplication algorithm – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Matrix_multiplication_algorithm](https://en.wikipedia.org/wiki/Matrix_multiplication_algorithm)  
+[^71]: Cannon's algorithm for distributed matrix multiplication – OpenGenus IQ, accessed October 6, 2025, [https://iq.opengenus.org/cannon-algorithm-distributed-matrix-multiplication/](https://iq.opengenus.org/cannon-algorithm-distributed-matrix-multiplication/)  
+[^72]: PARALLEL MATRIX MULTIPLICATION: A SYSTEMATIC JOURNEY 1. Introduction. This paper serves a number of purposes, accessed October 6, 2025, [https://www.cs.utexas.edu/~flame/pubs/SUMMA2d3dTOMS.pdf](https://www.cs.utexas.edu/~flame/pubs/SUMMA2d3dTOMS.pdf)  
+[^73]: Cannon's Algorithm, accessed October 6, 2025, [https://users.cs.utah.edu/~hari/teaching/paralg/tutorial/05_Cannons.html](https://users.cs.utah.edu/~hari/teaching/paralg/tutorial/05_Cannons.html)  
+[^74]: CS 140 Homework 3: SUMMA Matrix Multiplication – UCSB Computer Science, accessed October 6, 2025, [https://sites.cs.ucsb.edu/~gilbert/cs140/old/cs140Win2009/assignments/hw3.pdf](https://sites.cs.ucsb.edu/~gilbert/cs140/old/cs140Win2009/assignments/hw3.pdf)  
+[^75]: SUMMA: Scalable Universal Matrix Multiplication Algorithm – UCSB Computer Science, accessed October 6, 2025, [https://sites.cs.ucsb.edu/~gilbert/cs140/old/cs140Win2009/assignments/lawn96-SUMMA.pdf](https://sites.cs.ucsb.edu/~gilbert/cs140/old/cs140Win2009/assignments/lawn96-SUMMA.pdf)  
+[^76]: Parallel and Distributed Algorithms and ... – Canyi Lu (卢参义), accessed October 6, 2025, [https://canyilu.github.io/teaching/appd-fall-2016/tp4/tp4.pdf](https://canyilu.github.io/teaching/appd-fall-2016/tp4/tp4.pdf)  
+[^77]: Matrix multiplication on multidimensional torus networks – UC Berkeley EECS, accessed October 6, 2025, [http://eecs.berkeley.edu/Pubs/TechRpts/2012/EECS-2012-28.pdf](http://eecs.berkeley.edu/Pubs/TechRpts/2012/EECS-2012-28.pdf)  
+[^78]: Communication-optimal parallel 2.5D matrix multiplication and LU factorization algorithms – The Netlib, accessed October 6, 2025, [https://www.netlib.org/lapack/lawnspdf/lawn248.pdf](https://www.netlib.org/lapack/lawnspdf/lawn248.pdf)  
+[^79]: (PDF) Challenges in Parallel Graph Processing. – ResearchGate, accessed October 6, 2025, [https://www.researchgate.net/publication/220439595_Challenges_in_Parallel_Graph_Processing](https://www.researchgate.net/publication/220439595_Challenges_in_Parallel_Graph_Processing)  
+[^80]: Parallel Computing Strategies for Irregular Algorithms RUPAK BlSWAS NASA Ames Research Center LEONlD OLlKER and HONGZHANG SHAN L, accessed October 6, 2025, [https://crd.lbl.gov/assets/pubs_presos/CDS/FTG/ARSCsubmit.pdf](https://crd.lbl.gov/assets/pubs_presos/CDS/FTG/ARSCsubmit.pdf)  
+[^81]: Parallel Computing Strategies for Irregular Algorithms – NASA Technical Reports Server, accessed October 6, 2025, [https://ntrs.nasa.gov/api/citations/20020090950/downloads/20020090950.pdf](https://ntrs.nasa.gov/api/citations/20020090950/downloads/20020090950.pdf)  
+[^82]: Parallel Graph Algorithms – IIT Madras, accessed October 6, 2025, [https://www.cse.iitm.ac.in/~rupesh/teaching/gpu/jan25/9-casestudy-graphs.pdf](https://www.cse.iitm.ac.in/~rupesh/teaching/gpu/jan25/9-casestudy-graphs.pdf)  
+[^83]: Parallel breadth-first search – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Parallel_breadth-first_search](https://en.wikipedia.org/wiki/Parallel_breadth-first_search)  
+[^84]: High Level Approach to Parallel BFS – YouTube, accessed October 6, 2025, [https://www.youtube.com/watch?v=pxOL-R7gUiQ](https://www.youtube.com/watch?v=pxOL-R7gUiQ)  
+[^85]: Parallel Breadth-First Search on Distributed Memory Systems – People @EECS, accessed October 6, 2025, [https://people.eecs.berkeley.edu/~aydin/sc11_bfs.pdf](https://people.eecs.berkeley.edu/~aydin/sc11_bfs.pdf)  
+[^86]: A Parallelization of Dijkstra's Shortest Path Algorithm – People, accessed October 6, 2025, [https://people.mpi-inf.mpg.de/~mehlhorn/ftp/ParallelizationDijkstra.pdf](https://people.mpi-inf.mpg.de/~mehlhorn/ftp/ParallelizationDijkstra.pdf)  
+[^87]: Dijkstra's algorithm – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)  
+[^88]: Parallel Single-Source Shortest Paths – csail, accessed October 6, 2025, [https://courses.csail.mit.edu/6.884/spring10/projects/kelleyk-neboat-paper.pdf](https://courses.csail.mit.edu/6.884/spring10/projects/kelleyk-neboat-paper.pdf)  
+[^89]: Parallel single-source shortest path algorithm – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Parallel_single-source_shortest_path_algorithm](https://en.wikipedia.org/wiki/Parallel_single-source_shortest_path_algorithm)  
+[^90]: Parallel Dijkstra's Algorithm: SSSP in Parallel – GeeksforGeeks, accessed October 6, 2025, [https://www.geeksforgeeks.org/dsa/parallel-dijkstras-algorithm-sssp-in-parallel/](https://www.geeksforgeeks.org/dsa/parallel-dijkstras-algorithm-sssp-in-parallel/)  
+[^91]: Implementing Kruskal's and Prim's Algorithms: A Comprehensive Guide – AlgoCademy, accessed October 6, 2025, [https://algocademy.com/blog/implementing-kruskals-and-prims-algorithms-a-comprehensive-guide/](https://algocademy.com/blog/implementing-kruskals-and-prims-algorithms-a-comprehensive-guide/)  
+[^92]: Difference between Prim's and Kruskal's algorithm for MST – GeeksforGeeks, accessed October 6, 2025, [https://www.geeksforgeeks.org/dsa/difference-between-prims-and-kruskals-algorithm-for-mst/](https://www.geeksforgeeks.org/dsa/difference-between-prims-and-kruskals-algorithm-for-mst/)  
+[^93]: Parallel algorithms for minimum spanning trees – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Parallel_algorithms_for_minimum_spanning_trees](https://en.wikipedia.org/wiki/Parallel_algorithms_for_minimum_spanning_trees)  
+[^94]: Kruskal's algorithm – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Kruskal%27s_algorithm](https://en.wikipedia.org/wiki/Kruskal%27s_algorithm)
