@@ -13,6 +13,7 @@
     "@astrojs/mdx": "^4.3.6",
     "@astrojs/starlight": "^0.36.0",
     "astro": "^5.6.1",
+    "rehype-external-links": "^3.0.0",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
