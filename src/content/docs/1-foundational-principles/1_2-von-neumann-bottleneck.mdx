@@ -2,6 +2,7 @@
 title: "1.2 The von Neumann Bottleneck and the Memory Wall"
 description: "Understanding the fundamental limitations of the serial architecture that necessitated the shift to parallel computing."
 ---
+import harwardArch from '../../../assets/harward_arch.png';
 
 For decades, the performance of computers based on the von Neumann architecture improved at an exponential rate, primarily by increasing the clock speed of the CPU, allowing the fetch-decode-execute cycle to run faster. However, this approach eventually encountered fundamental physical and architectural limits. The very design that made the von Neumann architecture so successful—its centralized processing and unified memory system—contains inherent structural flaws that become increasingly problematic as the performance gap between components widens. These limitations manifest as two distinct but compounding crises: the von Neumann bottleneck and the Memory Wall. Together, they became the primary motivation for the paradigm shift towards parallel computing.
 
@@ -43,6 +44,12 @@ The most effective and widely used strategy is the introduction of a memory hier
 ### Modified Harvard Architecture
 
 While a pure von Neumann machine uses a single bus for everything, most modern high-performance CPUs implement a **modified Harvard architecture** at their core [^2]. This involves using separate L1 caches for instructions (I-cache) and data (D-cache), each with its own dedicated access path to the CPU's execution units [^2]. This separation allows the CPU to fetch an instruction and load or store data simultaneously, directly alleviating the von Neumann bottleneck at the level closest to the processor. The system as a whole still maintains a unified main memory, hence the term "modified" Harvard architecture.
+
+<a href="https://people.freebsd.org/~lstewart/articles/cpumemory.pdf" target="_blank" rel="noopener noreferrer">
+  <img src={harwardArch.src} alt="A diagram of the Modified Harvard Architecture, showing separate pathways for instructions and data to the CPU core, with separate L1i and L1d caches." width="500" />
+</a>
+
+*Image Credit: Based on a diagram from ["What Every Programmer Should Know About Memory"](https://people.freebsd.org/~lstewart/articles/cpumemory.pdf) by Ulrich Drepper.*
 
 ### Advanced CPU Features
 

@@ -2,6 +2,8 @@
 title: "1.3 Defining Parallel Computing"
 description: "Establishing a formal definition and scope for parallel computing as the solution to serial computing limitations."
 ---
+import sharedMemoryArch from '../../../assets/shared_memory_parallel_arch.jpg';
+import distributedMemArch from '../../../assets/distributed_mem_parallel_arch.png';
 
 The physical and architectural limitations inherent in the serial computing model—the power constraints that ended frequency scaling and the performance chokepoints of the von Neumann bottleneck and Memory Wall—necessitated a fundamental shift in computer architecture. This shift was towards **parallel computing**, a paradigm that has come to define the modern era of high-performance computing and is now ubiquitous in every device from smartphones to supercomputers [^7].
 
@@ -31,9 +33,22 @@ Parallel computers are built using several different hardware architectures, whi
 
 In this architecture, multiple processors or cores are contained within a single machine and are all connected to a single, globally accessible main memory [^19]. Any processor can directly access any memory location. This model simplifies programming because processors can communicate and share data implicitly by reading and writing to the same memory locations. Virtually all modern multi-core laptops, desktops, and smartphones are examples of shared memory parallel computers [^6].
 
+<a href="https://www.sciencedirect.com/topics/computer-science/shared-memory-architecture" target="_blank" rel="noopener noreferrer">
+  <img src={sharedMemoryArch.src} alt="Basic shared memory architecture, showing both Uniform memory access (UMA) and Non-uniform memory access (NUMA) models." width="500" />
+</a>
+
+*Basic shared memory architecture. (a) Uniform memory access (UMA) architecture. (b) Non-uniform memory access (NUMA) architecture.*
+*Image Credit: [ScienceDirect](https://www.sciencedirect.com/topics/computer-science/shared-memory-architecture)*
+
 ### Distributed Memory Systems
 
 This architecture connects multiple independent computers, often called nodes, via a high-speed network [^6]. Each node contains its own processor(s) and its own private, local memory. A processor in one node cannot directly access the memory of another node. Therefore, communication and data sharing must be handled explicitly by the programmer, typically by sending and receiving messages over the network [^6]. This model is highly scalable and forms the basis for most large-scale supercomputer clusters and cloud computing infrastructures [^19].
+
+<a href="https://www.researchgate.net/publication/272377248_Overview_of_Trends_Leading_to_Parallel_Computing_and_Parallel_Programming" target="_blank" rel="noopener noreferrer">
+  <img src={distributedMemArch.src} alt="A diagram of a distributed memory system, showing multiple nodes with their own CPU and Memory, connected by a network." width="500" />
+</a>
+
+*A typical distributed memory architecture where each processor has its own private memory, and communication is handled over a network. Image Credit: [ResearchGate](https://www.researchgate.net/publication/272377248_Overview_of_Trends_Leading_to_Parallel_Computing_and_Parallel_Programming)*
 
 ### Hybrid Systems
 
