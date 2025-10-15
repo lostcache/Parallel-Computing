@@ -4,6 +4,7 @@ description: "Establishing a formal definition and scope for parallel computing 
 ---
 import sharedMemoryArch from '../../../assets/shared_memory_parallel_arch.jpg';
 import distributedMemArch from '../../../assets/distributed_mem_parallel_arch.png';
+import hybridMemArch from '../../../assets/Hybrid-Distributed-Shared-Memory-from-the-perspective-of-parallel-computer-memory.png';
 
 The physical and architectural limitations inherent in the serial computing model—the power constraints that ended frequency scaling and the performance chokepoints of the von Neumann bottleneck and Memory Wall—necessitated a fundamental shift in computer architecture. This shift was towards **parallel computing**, a paradigm that has come to define the modern era of high-performance computing and is now ubiquitous in every device from smartphones to supercomputers [^7].
 
@@ -53,6 +54,12 @@ This architecture connects multiple independent computers, often called nodes, v
 ### Hybrid Systems
 
 The most common architecture for modern high-performance computing (HPC) systems is a hybrid of the shared and distributed memory models [^18]. These systems are clusters of multiple nodes connected by a network (a distributed memory system). However, each individual node is itself a shared memory parallel computer, containing multiple cores that share access to that node's local memory [^6]. This hierarchical design allows programmers to use shared-memory programming techniques within a node and message-passing techniques for communication between nodes, offering a balance of programming convenience and massive scalability.
+
+<a href="https://www.researchgate.net/publication/312593963_ADAPTIVE_PARALLEL_ELM_WITH_CONVOLUTIONAL_FEATURES_FOR_BIG_STREAM_DATA" target="_blank" rel="noopener noreferrer">
+  <img src={hybridMemArch.src} alt="Hybrid distributed-shared memory architecture showing multiple nodes connected via network, with each node containing multiple CPUs and shared memory." width="500" />
+</a>
+
+*A hybrid distributed-shared memory architecture where multiple nodes (each with multiple CPUs and shared memory) are connected via a network, combining both shared memory within nodes and distributed memory across nodes. Image Credit: [ResearchGate](https://www.researchgate.net/publication/312593963_ADAPTIVE_PARALLEL_ELM_WITH_CONVOLUTIONAL_FEATURES_FOR_BIG_STREAM_DATA)*
 
 ## References
 
