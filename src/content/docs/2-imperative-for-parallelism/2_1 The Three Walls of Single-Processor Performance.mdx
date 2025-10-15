@@ -2,6 +2,8 @@
 title: "2.1 The Three Walls of Single-Processor Performance"
 description: "The physical and architectural barriers—Power, Memory, and ILP—that ended the era of single-core frequency scaling."
 ---
+import powerWallGraph from '../../../assets/single_processor_power_wall.gif';
+
 The end of single-core scaling was not a single event but a systemic failure. The three walls were deeply interconnected, creating a vicious feedback loop. The quest for more Instruction-Level Parallelism led to more complex, power-hungry circuits, slamming designers into the Power Wall. The performance gains that were achieved only served to widen the chasm between the processor and main memory, exacerbating the Memory Wall. The system was fundamentally imbalanced, and the paradigm that had driven the industry for thirty years collapsed.[^1]
 
 ### 2.1.1 The Power Wall
@@ -19,6 +21,12 @@ This collision with the Power Wall is starkly visible in the industry's own proj
 | **1986–2002** | \~52% | Clock Frequency Scaling |
 | **Post-2002** | \~6% | Architectural Tweaks |
 
+<div style="background-color: white; padding: 1rem; display: inline-block; border-radius: 0.25rem;">
+  <img src={powerWallGraph.src} alt="Graph showing clock rate and power consumption trends from 1982 to 2007, illustrating the power wall where power consumption skyrocketed while clock rate growth stalled." width="600" />
+</div>
+
+*Clock rate and power consumption trends showing the power wall crisis. As clock rates approached their physical limits, power consumption continued to rise unsustainably. Image Credit: Patterson & Hennessy*
+
 The industry was forced into a new direction. While high-end, cost-insensitive sectors like mainframes could resort to exotic solutions—such as the sophisticated water-cooling systems used by IBM to run its POWER6 CPUs at over 5.0 GHz—this was not a viable path for the mass market.[^6] For commodity providers like Intel and AMD, the only logical and economically feasible solution was to abandon the frequency race. They began using the ever-increasing transistor budget from Moore's Law not to make one core faster, but to place multiple, simpler, more power-efficient cores onto a single chip.[^2] The multi-core era was born directly from the ashes of the single-core frequency race.
 
 ### 2.1.2 The Memory Wall (Revisited)
@@ -31,6 +39,15 @@ The quantitative trends underlying this phenomenon are stark:
 
 Because the difference between two diverging exponential functions is another, faster-growing exponential, the processor-memory performance gap was doubling every 1.5 to 2 years.[^8] Wulf and McKee's 1994 paper made a prescient forecast: by 2010, the average memory access would cost nearly 100 processor cycles, even with an optimistic 99% cache hit rate.[^9] This prediction proved accurate. Today, a single main memory access can cost
 **200 to 300 CPU cycles**—a chasm of wasted time during which a modern core can do no useful work.[^10]
+
+<div style="background-color: white; padding: 1rem; display: inline-block; border-radius: 0.25rem;">
+<a href="https://www.researchgate.net/figure/Memory-Access-vs-CPU-Speed_fig1_254014003" target="_blank" rel="noopener noreferrer">
+<img src="https://www.researchgate.net/profile/Christine-Eisenbeis/publication/254014003/figure/fig1/AS:393211676774402@1470760377534/Memory-Access-vs-CPU-Speed.png" alt="A graph showing CPU performance increasing exponentially while memory performance improves linearly, illustrating the Memory Wall." width="600" />
+</a>
+</div>
+
+*A visual representation of the growing disparity between CPU performance improvement and memory (DRAM) performance improvement over the years. The widening gap is often referred to as the "Memory Wall." Image Credit: [ResearchGate/Christine Eisenbeis](https://www.researchgate.net/figure/Memory-Access-vs-CPU-Speed_fig1_254014003)*
+
 To combat this, architects implemented a hierarchy of **cache memories**: small, fast, and expensive SRAM banks placed physically closer to the processor core. Caches work by exploiting the principle of **locality**—the tendency of programs to reuse data they have recently accessed (temporal locality) and access data stored nearby (spatial locality). However, caches are a mitigation, not a solution. They delay, but do not eliminate, the costly trip to main memory. A "cache miss" forces the processor to stall. As processors became exponentially faster, the penalty for each miss, measured in lost cycles, grew exponentially as well.
 This problem has only been exacerbated in the modern era. The rise of data-intensive workloads like AI and big data analytics means that applications frequently operate on datasets far too large to fit in on-chip caches.[^11] For these applications, performance is no longer limited by computation but by
 **memory bandwidth**—the rate at which data can be moved. This has led to the development of architectural innovations like High-Bandwidth Memory (HBM), which stacks DRAM dies vertically on the same package as the processor to increase bandwidth and reduce data movement.[^11] The Memory Wall, once a problem of latency, has evolved into a problem of both latency and bandwidth, remaining the most resilient of the three walls.[^12]
