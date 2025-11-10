@@ -71,6 +71,14 @@
     vertical-align: super;
 }
 
+/* Custom style to center images within figure tags */
+.centered-image {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 2em 0; /* Add some vertical spacing */
+}
+
 /* Bibliography entry styles */
 #refs .csl-entry {
     margin-bottom: 1em;

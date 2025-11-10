@@ -45,9 +45,11 @@ The most effective and widely used strategy is the introduction of a memory hier
 
 While a pure von Neumann machine uses a single bus for everything, most modern high-performance CPUs implement a **modified Harvard architecture** at their core [^2]. This involves using separate L1 caches for instructions (I-cache) and data (D-cache), each with its own dedicated access path to the CPU's execution units [^2]. This separation allows the CPU to fetch an instruction and load or store data simultaneously, directly alleviating the von Neumann bottleneck at the level closest to the processor. The system as a whole still maintains a unified main memory, hence the term "modified" Harvard architecture.
 
-<a href="https://people.freebsd.org/~lstewart/articles/cpumemory.pdf" target="_blank" rel="noopener noreferrer">
-  <img src={harwardArch.src} alt="A diagram of the Modified Harvard Architecture, showing separate pathways for instructions and data to the CPU core, with separate L1i and L1d caches." width="500" />
-</a>
+<div class="centered-image">
+  <a href="https://people.freebsd.org/~lstewart/articles/cpumemory.pdf" target="_blank" rel="noopener noreferrer">
+    <img src={harwardArch.src} alt="A diagram of the Modified Harvard Architecture, showing separate pathways for instructions and data to the CPU core, with separate L1i and L1d caches." width="500" />
+  </a>
+</div>
 
 *Image Credit: Based on a diagram from ["What Every Programmer Should Know About Memory"](https://people.freebsd.org/~lstewart/articles/cpumemory.pdf) by Ulrich Drepper.*
 

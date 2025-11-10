@@ -2,9 +2,19 @@
 title: "4.4 Supporting Architecture: Multi-Level Caches and Coherence"
 description: "The memory hierarchy and cache coherence protocols that enable efficient multi-core processing."
 ---
+import { Image } from 'astro:assets';
+import cpu_cache from '../../../assets/cpu_cache.png';
+import mesi_proto from '../../../assets/mesi_proto.png';
+
 The immense computational power of a modern multi-core, superscalar, and SIMD-enabled processor would be rendered useless if it could not be supplied with data at a sufficient rate. The parallel execution engines are voracious consumers of instructions and data, but main memory (DRAM) access is orders of magnitude slower than the processor's clock cycle. This ever-widening performance gap between the CPU and main memory is known as the **"memory wall,"** and it represents one of the most significant bottlenecks in modern computer architecture.[^7] To bridge this chasm, CPUs employ a sophisticated supporting architecture built around a multi-level memory hierarchy and a protocol for maintaining data consistency across multiple cores.
 
-#### **The Multi-Level Cache Hierarchy**
+<div class="centered-image">
+  <Image src={cpu_cache} width={500} alt="A diagram illustrating a typical multi-level CPU cache hierarchy, showing L1 instruction and data caches, L2 cache, L3 cache, and main memory connected via a bus." />
+</div>
+
+*Image Credit: Based on a diagram from <a href="https://people.freebsd.org/~lstewart/articles/cpumemory.pdf">"What Every Programmer Should Know About Memory"</a> by Ulrich Drepper.*
+
+### The Multi-Level Cache Hierarchy
 
 The primary defense against the memory wall is the **multi-level cache hierarchy**, a system of small, extremely fast, on-chip memory stores (SRAM) that hold copies of frequently used data and instructions from main memory. When the processor needs a piece of data, it first checks the fastest, closest level of cache. If the data is present (a "cache hit"), it is delivered to the core in just a few clock cycles. If it is not present (a "cache miss"), the processor checks the next, larger and slower level of cache. Only if the data is not found in any on-chip cache does the processor undertake the long-latency journey to main memory.[^39] Modern CPUs typically feature three levels of cache:
 
@@ -12,13 +22,19 @@ The primary defense against the memory wall is the **multi-level cache hierarchy
 *   **Level 2 (L2) Cache:** The L2 cache is larger and consequently slower than the L1 cache. It acts as a backstop for L1 misses. If data is not found in L1, the L2 is checked before an access to the L3 or main memory is initiated. In many modern designs, each core has its own private L2 cache, though some architectures have used shared L2 designs.[^39]
 *   **Level 3 (L3) Cache / Last-Level Cache (LLC):** The L3 cache is the largest and slowest of the on-chip caches. It is typically a unified cache (holding both instructions and data) and is shared among all the cores on the processor die. The shared L3 serves two critical functions: it acts as a large, common data repository, reducing the need for costly off-chip memory accesses, and it facilitates efficient data sharing and communication between cores.[^39]
 
-#### **The Cache Coherence Problem and the MESI Protocol**
+### The Cache Coherence Problem and the MESI Protocol
 
 The introduction of multi-core processors with private L1 and L2 caches creates a fundamental data consistency problem. Consider a scenario where Core A reads a memory location X into its private cache. Later, Core B reads the same location X into its own private cache. Now, if Core A modifies its copy of X, Core B's cache now holds a stale, invalid copy of that data. Any subsequent computation on Core B that uses X will produce an incorrect result. This is the **cache coherence problem**.[^41]
 
 To solve this, processors implement a **cache coherence protocol**, a set of rules that all cache controllers follow to ensure that all cores maintain a consistent and unified view of shared memory. In most modern systems, this is achieved through a "snooping" protocol, where each cache controller monitors (or "snoops") a shared system bus or interconnect for memory transactions initiated by other caches. By observing these transactions, a cache can determine when its own data has become stale and take appropriate action.[^41]
 
 One of the most common and foundational snooping protocols is the **MESI protocol**, an acronym for the four states a cache line can be in: **Modified, Exclusive, Shared, and Invalid**. Each cache line in the system has a set of state bits associated with it, and the protocol dictates how this state changes in response to local processor actions (reads and writes) and remote snooped actions.[^42]
+
+<div class="centered-image">
+  <Image src={mesi_proto} width={500} alt="A state diagram illustrating the transitions between Modified, Exclusive, Shared, and Invalid states in the MESI cache coherence protocol, triggered by local and remote read/write operations." />
+</div>
+
+*Image Credit: Based on a diagram from <a href="https://people.freebsd.org/~lstewart/articles/cpumemory.pdf">"What Every Programmer Should Know About Memory"</a> by Ulrich Drepper.*
 
 The four MESI states are:
 
@@ -38,7 +54,7 @@ The following table provides a simplified overview of these critical state trans
 | **Exclusive (E)** | **Hit:** No action. | **Hit:** No bus transaction needed. Go to **Modified**. | Another cache wants the data. Flush data to bus. Go to **Shared**. | Line is invalidated. Go to **Invalid**. |
 | **Modified (M)** | **Hit:** No action. | **Hit:** No action. | Another cache wants the data. Flush data to bus (and write back to memory). Go to **Shared**. | Another cache is writing. Flush data to bus (and write back). Go to **Invalid**. |
 
-## References
+### References
 
 [^7]: Multi-core processor - Wikipedia, accessed October 2, 2025, [https://en.wikipedia.org/wiki/Multi-core_processor](https://en.wikipedia.org/wiki/Multi-core_processor)
 [^39]: Cache hierarchy - Wikipedia, accessed October 2, 2025, [https://en.wikipedia.org/wiki/Cache_hierarchy](https://en.wikipedia.org/wiki/Cache_hierarchy)

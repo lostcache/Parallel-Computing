@@ -6,6 +6,34 @@ The collision with the power wall and the diminishing returns of instruction-lev
 
 The most direct and widespread implementation of TLP is **Chip Multiprocessing (CMP)**, more commonly known as multi-core architecture. The concept is straightforward: use the ever-increasing transistor budget provided by Moore's Law not to build a single, more complex monolithic core, but to place multiple, independent processor cores onto a single silicon die.[^7] Each core has its own architectural state and can execute a separate thread, with the operating system scheduling tasks across the available cores.
 
+<br />
+
+### Case Study: The NetBurst Microarchitecture and the Limits of Frequency Scaling
+
+The Intel Pentium 4 processor, based on the NetBurst microarchitecture, serves as a significant historical example illustrating the challenges and limitations encountered in pursuing performance gains primarily through increased clock frequency. This architectural approach ultimately necessitated a paradigm shift towards multi-core designs.
+
+**Architectural Premise: Deep Pipelining for Frequency**
+
+The core design principle of the NetBurst microarchitecture was the implementation of a very deep instruction pipeline, intended to facilitate extremely high clock speeds. Initial iterations, such as the "Willamette" core, featured a 20-stage pipeline, which was extended to 31 stages in subsequent designs like the "Prescott" core.[^13] This contrasted sharply with contemporary architectures, such as the Pentium III, which utilized a 10-stage pipeline. The hypothesis was that a reduced amount of work per pipeline stage would enable higher clock frequencies, thereby increasing overall performance.
+
+**Technical Challenges: Power, Heat, and IPC Degradation**
+
+The deep pipeline architecture introduced several critical technical challenges:
+
+*   **Branch Misprediction Penalty:** Deep pipelines are highly sensitive to branch mispredictions. A mispredicted branch necessitates flushing a substantial portion of the pipeline, leading to significant wasted cycles and a reduction in effective Instructions Per Clock (IPC) throughput. To compensate for this inherent IPC limitation, increasingly higher clock frequencies were required, exacerbating other issues.
+*   **Power Density and Thermal Limits:** The relationship between clock frequency and power consumption is non-linear, with power dissipation approximately proportional to `Capacitance × Voltage² × Frequency`. As NetBurst processors pushed frequencies towards 4 GHz, power consumption and thermal output escalated dramatically. The "Prescott" core, for instance, became notable for its high thermal design power (TDP) and the associated cooling requirements. This phenomenon is commonly referred to as the "power wall," where further increases in clock frequency become impractical due to insurmountable thermal management challenges.
+*   **Projected Performance Limits:** The architectural trajectory of NetBurst encountered fundamental physical barriers. Plans for a 4 GHz Pentium 4 were largely curtailed, and the development of its successor, codenamed "Tejas," targeting even higher frequencies, was ultimately canceled due to these insurmountable power and thermal constraints.
+
+**Consequences: The Shift to Multi-Core Architectures**
+
+The limitations encountered with the NetBurst microarchitecture underscored the diminishing returns of single-core frequency scaling. This realization prompted a strategic reorientation within the industry, particularly at Intel. The subsequent development of the Intel Core microarchitecture marked a departure from the NetBurst philosophy, prioritizing:
+
+1.  **Enhanced IPC:** Focus on executing more instructions per clock cycle rather than solely increasing clock speed.
+2.  **Power Efficiency:** Design for optimal performance within practical power and thermal envelopes.
+3.  **Multi-Core Integration:** Leveraging increased transistor budgets to integrate multiple independent processing cores onto a single die, thereby exploiting Thread-Level Parallelism (TLP).
+
+This architectural pivot, exemplified by the success of the Core 2 Duo processors, established multi-core design as the dominant paradigm for achieving future performance improvements in general-purpose computing.
+
 The transition to multi-core processors in the consumer market happened rapidly in the mid-2000s, directly in the wake of NetBurst's failure. AMD was the first to market with a mainstream desktop dual-core processor, the **Athlon 64 X2**, in April 2005.[^26] Intel quickly followed with its own dual-core offerings, initially with the Pentium D, which was a less-than-elegant Multi-Chip Module (MCM) design that essentially placed two separate Pentium 4 dies on a single package.[^16] However, Intel's true breakthrough came in July 2006 with the launch of the
 **Core 2 Duo**. Based on the new, highly efficient Core microarchitecture, it marked a definitive abandonment of the NetBurst philosophy and delivered superior performance at significantly lower power consumption, re-establishing Intel's leadership in the market.[^16] The race for core counts had begun. Intel launched the first desktop quad-core processor, the
 **Core 2 Quad QX6700** (codenamed "Kentsfield"), in November 2006. Like the Pentium D, this was an MCM design, effectively packaging two dual-core dies together.[^29] AMD followed in 2007 with its first "native" or monolithic quad-core design, the Phenom processor.[^26]
