@@ -29,6 +29,67 @@ The sequential BFS algorithm maintains a queue of vertices to visit. A parallel 
 
 This process can be viewed as a sequence of sparse matrix-vector multiplications, where the matrix is the graph's adjacency matrix and the vector represents the current frontier.[^85] The main challenge is the potential for severe load imbalance if some vertices in the frontier have vastly more neighbors than others. Optimization techniques focus on dynamic load balancing and reducing the cost of global synchronization between levels.[^83]
 
+```pseudo
+Algorithm: ParallelBFS(Graph G, source vertex s, p processors)
+Input: Graph G = (V, E), source vertex s, p processors
+Output: Distance array dist[v] for all vertices v
+
+// Initialize
+parallel for all vertices v in V do
+    dist[v] = ∞
+    visited[v] = false
+end parallel
+
+dist[s] = 0
+current_frontier = {s}
+level = 0
+
+// Level-synchronous BFS
+while current_frontier is not empty do
+    next_frontier = empty set
+
+    // Partition frontier among processors
+    frontier_per_processor = |current_frontier| / p
+
+    parallel for each processor i = 0 to p-1 do
+        local_next_frontier = empty set
+
+        // Each processor processes its portion of the frontier
+        for each vertex v in current_frontier[i] do
+            // Explore neighbors of v
+            for each neighbor u of v do
+                // Attempt to mark u as visited
+                if atomic_compare_and_swap(visited[u], false, true) then
+                    dist[u] = level + 1
+                    local_next_frontier.add(u)
+                end
+            end
+        end
+
+        // Collect local next frontiers
+        contribute(local_next_frontier, next_frontier)
+    end parallel
+
+    // Barrier synchronization - wait for all processors
+    barrier()
+
+    // Gather all local next frontiers into global next frontier
+    current_frontier = gather(next_frontier)
+    level = level + 1
+end
+
+return dist
+```
+
+Time Complexity per level: O((|V| + |E|)/p)
+Total levels: O(diameter of graph)
+Synchronization: O(diameter) barriers
+
+Key challenges:
+- Load imbalance due to irregular vertex degrees
+- Contention when marking vertices as visited
+- Cost of global synchronization at each level
+
 ### **Single-Source Shortest Path (SSSP): Parallelizing Dijkstra's Algorithm**
 
 Dijkstra's algorithm finds the shortest paths from a single source to all other vertices in a weighted graph with non-negative edge weights. Its standard implementation, however, is inherently sequential.[^86]
@@ -44,6 +105,90 @@ Parallelizing Dijkstra's requires relaxing this strict greedy constraint.
 *   **Delta-Stepping Algorithm:** This is a widely used parallel SSSP algorithm. Instead of processing one vertex at a time, it processes vertices in "buckets," where each bucket corresponds to a range of distances of size Δ. In each phase, all "light" edges (those with weight ≤ Δ) connected to vertices in the current lowest-indexed non-empty bucket can be relaxed in parallel. This may introduce redundant work, but it exposes significant parallelism by allowing many vertices to be processed concurrently.[^89]
 *   **Data Parallelism:** A simpler but less scalable approach is to use data parallelism within each step of the sequential algorithm, for instance, by parallelizing the search for the minimum-distance vertex or the relaxation of edges using frameworks like OpenMP.[^90]
 
+```pseudo
+Algorithm: DeltaStepping_SSSP(Graph G, source s, delta, p processors)
+Input: Weighted graph G = (V, E), source s, parameter Δ, p processors
+Output: Shortest distances dist[v] from s to all vertices v
+
+// Initialize
+parallel for all vertices v in V do
+    dist[v] = ∞
+end parallel
+
+dist[s] = 0
+
+// Buckets: bucket[i] contains vertices with tentative distance in [i*Δ, (i+1)*Δ)
+buckets = array of empty sets
+buckets[0].add(s)
+
+current_bucket_index = 0
+
+while exists non-empty bucket do
+    // Find lowest non-empty bucket
+    while buckets[current_bucket_index] is empty do
+        current_bucket_index = current_bucket_index + 1
+    end
+
+    // Process current bucket until empty
+    while buckets[current_bucket_index] is not empty do
+        current_set = buckets[current_bucket_index]
+        buckets[current_bucket_index] = empty
+
+        // Phase 1: Relax light edges (weight ≤ Δ) in parallel
+        parallel for each vertex v in current_set using p processors do
+            for each light edge (v, u) with weight w ≤ Δ do
+                new_dist = dist[v] + weight(v, u)
+
+                if new_dist < dist[u] then
+                    // Atomic update of distance
+                    old_dist = atomic_min(dist[u], new_dist)
+
+                    if old_dist > new_dist then
+                        // Remove u from old bucket (if present)
+                        old_bucket = floor(old_dist / Δ)
+                        buckets[old_bucket].remove(u)
+
+                        // Add u to new bucket
+                        new_bucket = floor(new_dist / Δ)
+                        buckets[new_bucket].add(u)
+                    end
+                end
+            end
+        end parallel
+
+        barrier()
+    end
+
+    // Phase 2: Relax heavy edges (weight > Δ) once per bucket
+    parallel for each vertex v that was in current bucket do
+        for each heavy edge (v, u) with weight w > Δ do
+            new_dist = dist[v] + weight(v, u)
+
+            if new_dist < dist[u] then
+                old_dist = atomic_min(dist[u], new_dist)
+
+                if old_dist > new_dist then
+                    old_bucket = floor(old_dist / Δ)
+                    buckets[old_bucket].remove(u)
+
+                    new_bucket = floor(new_dist / Δ)
+                    buckets[new_bucket].add(u)
+                end
+            end
+        end
+    end parallel
+
+    barrier()
+end
+
+return dist
+```
+
+Time Complexity: O((|V| + |E|/Δ) × log|V|) expected
+Parameter Δ: Trade-off between parallelism and redundant work
+- Small Δ: More buckets, less redundant work, less parallelism
+- Large Δ: Fewer buckets, more redundant work, more parallelism
+
 ### **Minimum Spanning Tree (MST)**
 
 An MST of a weighted, undirected graph is a subgraph that connects all vertices with the minimum possible total edge weight. The parallelizability of MST algorithms depends on their underlying greedy strategy.
@@ -51,6 +196,87 @@ An MST of a weighted, undirected graph is a subgraph that connects all vertices 
 *   **Prim's Algorithm:** Prim's algorithm is structurally similar to Dijkstra's. It grows a single MST by iteratively adding the cheapest edge that connects a vertex inside the growing tree to a vertex outside of it.[^91] This reliance on a single, global greedy choice makes it inherently sequential and difficult to parallelize effectively.[^92]
 *   **Kruskal's Algorithm:** Kruskal's algorithm is more amenable to parallelism. It sorts all edges by weight and then adds edges from the sorted list if they do not form a cycle.[^94] The initial edge sorting is highly parallelizable. The main sequential bottleneck is the cycle detection step, which typically uses a union-find data structure. While this step is challenging to parallelize, variants like Filter-Kruskal have been developed to improve performance by partitioning edges and filtering out those guaranteed to be in the same component.[^93]
 *   **Boruvka's Algorithm:** This algorithm is often considered the most naturally parallel MST algorithm. In each step, every vertex (or component) simultaneously finds the cheapest edge connecting it to another vertex (or component), and all these edges are added to the MST. This process of finding local minimums and contracting components is repeated until a single tree remains. The ability for all components to make independent greedy choices in each step exposes massive parallelism.[^91]
+
+```pseudo
+Algorithm: ParallelBoruvka_MST(Graph G, p processors)
+Input: Weighted undirected graph G = (V, E), p processors
+Output: Minimum Spanning Tree edges
+
+// Initialize: each vertex is its own component
+parallel for each vertex v in V do
+    component[v] = v
+    cheapest_edge[v] = null
+end parallel
+
+MST_edges = empty set
+num_components = |V|
+
+while num_components > 1 do
+    // Phase 1: Each component finds its minimum-weight outgoing edge
+    parallel for each vertex v in V using p processors do
+        // Find cheapest edge leaving v's component
+        min_edge = null
+        min_weight = ∞
+
+        for each edge (v, u) incident to v do
+            if component[v] ≠ component[u] and weight(v, u) < min_weight then
+                min_edge = (v, u)
+                min_weight = weight(v, u)
+            end
+        end
+
+        // Update component's cheapest edge atomically
+        comp_id = component[v]
+        atomic_update_min(cheapest_edge[comp_id], min_edge, min_weight)
+    end parallel
+
+    barrier()
+
+    // Phase 2: Add selected edges to MST (avoiding duplicates)
+    selected_edges = empty set
+
+    parallel for each component c do
+        if cheapest_edge[c] ≠ null then
+            edge = cheapest_edge[c]
+            // Add edge if not already added by other endpoint
+            if edge not in selected_edges then
+                selected_edges.add(edge)
+            end
+        end
+    end parallel
+
+    MST_edges = MST_edges ∪ selected_edges
+    barrier()
+
+    // Phase 3: Merge components (Union-Find)
+    parallel for each edge (u, v) in selected_edges do
+        // Union operation: merge component[u] and component[v]
+        root_u = find_root(u, component)
+        root_v = find_root(v, component)
+
+        if root_u ≠ root_v then
+            union(root_u, root_v, component)
+            atomic_decrement(num_components)
+        end
+    end parallel
+
+    barrier()
+
+    // Phase 4: Path compression for efficiency
+    parallel for each vertex v do
+        component[v] = find_root(v, component)
+        cheapest_edge[component[v]] = null  // Reset for next iteration
+    end parallel
+
+    barrier()
+end
+
+return MST_edges
+```
+
+Time Complexity: O(log |V|) iterations × O(|E|/p) per iteration
+Parallelism: High - all vertices/components work independently each round
+Key advantage: Naturally parallel, no single sequential bottleneck
 
 The challenges in parallelizing these graph algorithms reveal a deeper pattern: the degree of parallelism is often inversely related to the "greediness" of the sequential algorithm. Algorithms like Dijkstra's and Prim's, which rely on a single, globally optimal choice at each step, create sequential bottlenecks. In contrast, algorithms like BFS, which explores all options at a given level, or Boruvka's, which allows for multiple *local* greedy choices to be made simultaneously, are far more parallelizable. To parallelize a strongly greedy algorithm often requires relaxing its strict criteria, as seen in the delta-stepping approach, trading sequential algorithmic elegance for parallel performance.
 

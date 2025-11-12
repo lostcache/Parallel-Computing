@@ -23,6 +23,50 @@ The MapReduce workflow proceeds through a sequence of defined stages:[^43]
 
 The strength of MapReduce lies in its scalability and fault tolerance. It allows programmers to focus on the Map and Reduce logic, while the framework handles the distribution of work and recovery from node failures.[^45]
 
+#### Example: Word Count with MapReduce
+
+```pseudo
+Algorithm: MapReduce_WordCount(documents)
+Input: Collection of text documents
+Output: Word frequency counts
+
+// User-defined Map function
+function Map(document_id, document_text)
+    for each word in document_text do
+        emit(word, 1)  // Emit (key, value) pair
+    end
+
+// User-defined Reduce function
+function Reduce(word, list_of_counts)
+    total = 0
+    for each count in list_of_counts do
+        total = total + count
+    end
+    emit(word, total)
+
+// MapReduce Framework automatically handles:
+// 1. Splitting input data across map workers
+parallel for each document split do
+    Map(split_id, split_content)
+end parallel
+
+// 2. Shuffling and sorting by key
+intermediate_data = shuffle_and_sort(map_outputs)
+
+// 3. Distributing to reduce workers
+parallel for each unique_word in intermediate_data do
+    Reduce(unique_word, intermediate_data[unique_word])
+end parallel
+
+return final_results
+```
+
+Example execution:
+- Input: ["hello world", "hello hadoop"]
+- After Map: [("hello", 1), ("world", 1), ("hello", 1), ("hadoop", 1)]
+- After Shuffle: [("hadoop", [1]), ("hello", [1, 1]), ("world", [1])]
+- After Reduce: [("hadoop", 1), ("hello", 2), ("world", 1)]
+
 ### The Fork/Join Pattern
 
 The Fork/Join pattern is a task-parallel model for implementing divide-and-conquer algorithms on shared-memory multi-core systems.[^49] It is designed to exploit parallelism in problems that can be recursively broken down into smaller, independent sub-problems.
@@ -37,6 +81,44 @@ The pattern's execution flow mirrors the recursive nature of divide-and-conquer 
 
 A key implementation detail that makes the Fork/Join pattern efficient is its use of a **work-stealing scheduler**.[^52] A pool of worker threads is created (typically one per CPU core), and each thread maintains its own double-ended queue (deque) of tasks. When a thread's deque is empty, it "steals" a task from the tail of another thread's deque. This provides dynamic load balancing, ensuring that all cores remain busy.[^53] This pattern is well-suited for problems like parallel merge sort and quicksort.[^50]
 
+#### Example: Fork/Join Parallel Sum
+
+```pseudo
+Algorithm: ForkJoin_ParallelSum(array, start, end, threshold)
+Input: Array of numbers, start and end indices, threshold for sequential execution
+Output: Sum of array elements
+
+if (end - start) <= threshold then
+    // Base case: compute sequentially
+    sum = 0
+    for i = start to end do
+        sum = sum + array[i]
+    end
+    return sum
+else
+    // Recursive case: divide and conquer
+    mid = (start + end) / 2
+
+    // Fork: create two subtasks
+    left_task = spawn ForkJoin_ParallelSum(array, start, mid, threshold)
+    right_task = spawn ForkJoin_ParallelSum(array, mid+1, end, threshold)
+
+    // Join: wait for results and combine
+    left_sum = await left_task
+    right_sum = await right_task
+
+    return left_sum + right_sum
+end
+
+// Work-Stealing Scheduler (implicit)
+// - Each thread has a local deque of tasks
+// - Threads push/pop from their own deque (LIFO)
+// - Idle threads steal from other deques (FIFO from opposite end)
+```
+
+Time Complexity: O(n/p + log n) where p is the number of processors
+Space Complexity: O(log n) for recursion depth
+
 ### The Pipeline Pattern
 
 The Pipeline pattern is a form of task parallelism modeled after an assembly line. It is used when a computation can be broken down into a sequence of distinct, independent stages, where the output of one stage is the input for the next.[^39]
@@ -50,6 +132,55 @@ A pipeline consists of three main components:[^55]
 3.  **Sink:** The exit point that consumes the final processed data items.
 
 Parallelism is achieved through temporal concurrency. While Stage 1 is processing data item `i+1`, Stage 2 can simultaneously process data item `i`, and Stage 3 can process item `i-1`. After an initial "fill" period, all stages of the pipeline can be active at once, each working on a different data item.[^54] This structure is ideal for increasing the **throughput** (the rate at which data items are processed), though it does not necessarily reduce the **latency** (the time for a single data item to pass through the pipeline).
+
+#### Example: Pipeline Pattern for Image Processing
+
+```pseudo
+Algorithm: Pipeline_ImageProcessing(image_stream)
+Input: Stream of images
+Output: Processed images
+
+// Define pipeline stages
+shared queue queue1, queue2, queue3
+
+Stage 1: ImageReader()
+    while has_more_images do
+        image = read_next_image(image_stream)
+        enqueue(queue1, image)
+    end
+
+Stage 2: NoiseReduction()
+    while true do
+        image = dequeue(queue1)
+        filtered_image = apply_noise_filter(image)
+        enqueue(queue2, filtered_image)
+    end
+
+Stage 3: EdgeDetection()
+    while true do
+        image = dequeue(queue2)
+        edges = detect_edges(image)
+        enqueue(queue3, edges)
+    end
+
+Stage 4: FeatureExtraction()
+    while true do
+        edges = dequeue(queue3)
+        features = extract_features(edges)
+        output(features)
+    end
+
+// Execute all stages concurrently
+parallel
+    spawn_thread(ImageReader)
+    spawn_thread(NoiseReduction)
+    spawn_thread(EdgeDetection)
+    spawn_thread(FeatureExtraction)
+end parallel
+
+// Throughput = 1 / max(stage_time_1, stage_time_2, stage_time_3, stage_time_4)
+// Latency = stage_time_1 + stage_time_2 + stage_time_3 + stage_time_4
+```
 
 The performance of a pipeline is limited by its slowest stage, which determines the overall throughput.[^54] The pattern is used in CPU instruction execution, signal and image processing, data streaming analytics, and compilers.[^30]
 

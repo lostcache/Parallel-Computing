@@ -23,6 +23,55 @@ The algorithm for computing C = AB on a √p × √p grid, where processor P(i,j
 
 After √p steps, each block of A will have passed through each processor in its row, and each block of B will have passed through each processor in its column, ensuring that all necessary products for each C(i,j) have been computed. The algorithm is memory-efficient because each processor only needs to store one block of A, one of B, and one of C at any given time.[^69]
 
+```pseudo
+Algorithm: CannonsAlgorithm(A[n×n], B[n×n], √p × √p processor grid)
+Input: Matrices A and B of size n×n, p = √p × √p processors
+Output: Matrix C = A × B
+
+// Assume n is divisible by √p
+// Processor P(i,j) initially holds blocks A(i,j) and B(i,j)
+
+block_size = n / √p
+
+// Phase 1: Initial Alignment (Pre-skewing)
+parallel for each processor P(i, j) do
+    // Shift A blocks: row i shifted left by i positions (circular)
+    A_local = receive_from(P(i, (j+i) mod √p))
+
+    // Shift B blocks: column j shifted up by j positions (circular)
+    B_local = receive_from(P((i+j) mod √p, j))
+
+    // Initialize result block
+    C_local = 0
+end parallel
+
+// Phase 2: Compute-and-Shift Loop (√p iterations)
+for step = 0 to √p - 1 do
+    parallel for each processor P(i, j) do
+        // Compute: multiply local blocks and accumulate
+        C_local = C_local + (A_local × B_local)
+
+        // Shift A blocks: send left, receive from right
+        send(A_local, to_processor=P(i, (j-1) mod √p))
+        A_local = receive_from(P(i, (j+1) mod √p))
+
+        // Shift B blocks: send up, receive from below
+        send(B_local, to_processor=P((i-1) mod √p, j))
+        B_local = receive_from(P((i+1) mod √p, j))
+    end parallel
+end
+
+// Each processor now has its final C(i,j) block
+return C assembled from all C_local blocks
+```
+
+Time Complexity:
+- Computation: O(√p) steps × O((n/√p)³) = O(n³/p)
+- Communication: O(√p) nearest-neighbor shifts
+- Memory per processor: O(n²/p)
+
+Communication pattern: Torus/wraparound grid with nearest-neighbor only
+
 ### **SUMMA (Scalable Universal Matrix Multiplication Algorithm)**
 
 SUMMA is a more flexible and widely used algorithm that is the basis for matrix multiplication in libraries like ScaLAPACK. Instead of nearest-neighbor shifts, it uses broadcast communication and formulates the multiplication as a sequence of rank-k updates.[^72]
@@ -38,6 +87,66 @@ SUMMA also operates on a 2D processor grid, but it does not require the grid to 
     *   Each processor P(i,j) now has the necessary blocks of A and B. It performs a local matrix multiplication of the received blocks and adds the result to its local C(i,j) block.
 
 This process is repeated for all block columns of A and block rows of B. The result matrix C remains stationary, while the relevant panels of A and B are broadcast to all processors that need them for the current rank-k update.[^72]
+
+```pseudo
+Algorithm: SUMMA(A[n×n], B[n×n], p_rows × p_cols processor grid)
+Input: Matrices A and B of size n×n, processor grid p_rows × p_cols
+Output: Matrix C = A × B
+
+// Processor P(i,j) is responsible for computing block C(i,j)
+// A is distributed by rows, B by columns
+
+block_rows = n / p_rows
+block_cols = n / p_cols
+block_size = n / √p  // For simplicity, assume square blocks
+
+// Initialize result blocks
+parallel for each processor P(i, j) do
+    C_local[i][j] = 0
+end parallel
+
+// Outer loop: iterate over panels
+num_panels = n / block_size
+
+for k = 0 to num_panels - 1 do
+    parallel for each processor P(i, j) do
+        // Broadcast panel of A horizontally
+        if j == owner_of_column_k then
+            // This processor owns the k-th block column of A
+            A_panel = A_local[i][k]
+        end
+
+        // Broadcast A_panel to all processors in row i
+        A_panel = broadcast_along_row(A_panel, row=i)
+
+        // Broadcast panel of B vertically
+        if i == owner_of_row_k then
+            // This processor owns the k-th block row of B
+            B_panel = B_local[k][j]
+        end
+
+        // Broadcast B_panel to all processors in column j
+        B_panel = broadcast_along_column(B_panel, column=j)
+
+        // Rank-k update: local computation
+        C_local[i][j] = C_local[i][j] + (A_panel × B_panel)
+    end parallel
+end
+
+return C assembled from all C_local blocks
+```
+
+Example for 4×4 processors:
+- Iteration 0: Broadcast column 0 of A, row 0 of B
+  - P(0,0) computes: C(0,0) += A(0,0) × B(0,0)
+  - P(1,2) computes: C(1,2) += A(1,0) × B(0,2)
+- Iteration 1: Broadcast column 1 of A, row 1 of B
+  - Continue accumulating partial products
+
+Time Complexity:
+- Computation: O(n³/p)
+- Communication: O(k/b × n²/√p) broadcasts where k is matrix dimension
+- Memory per processor: O(n²/p)
 
 ### **Performance Analysis and Comparison**
 

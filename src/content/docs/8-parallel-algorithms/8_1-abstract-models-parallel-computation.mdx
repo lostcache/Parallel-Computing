@@ -35,6 +35,36 @@ The synchronous, unit-time access of the PRAM model can lead to memory access co
 
 A more powerful PRAM variant can simulate a weaker one. For example, a CRCW PRAM algorithm can be simulated on an EREW PRAM with the same number of processors, but with a time complexity increase of O(log P), where P is the number of processors.[^8]
 
+#### Example: Parallel Maximum Finding on PRAM
+
+A classic PRAM algorithm demonstrates concurrent read operations:
+
+```pseudo
+Algorithm: PRAM_FindMaximum(A[1..n])
+Input: Array A with n elements, P = n processors
+Output: Maximum element in A
+
+// Phase 1: Each processor reads two elements (CREW)
+parallel for i = 1 to n/2 do
+    Processor i:
+        local_max[i] = max(A[2*i-1], A[2*i])
+    end
+end parallel
+
+// Phase 2: Binary reduction using log(n) steps
+for level = 1 to log(n) do
+    parallel for i = 1 to n/(2^(level+1)) do
+        Processor i:
+            local_max[i] = max(local_max[2*i-1], local_max[2*i])
+        end
+    end parallel
+end
+
+return local_max[1]
+```
+
+This algorithm runs in O(log n) time with O(n) processors on a CREW PRAM, achieving optimal work efficiency of O(n).
+
 #### Theoretical Significance and Limitations
 
 The PRAM model is primarily of theoretical significance. It serves as a benchmark for determining the maximum possible parallelism in a problem by ignoring physical constraints.[^7] Analyzing algorithms in the PRAM model allows for the classification of problems by their parallel complexity. For instance, the class **NC** (Nick's Class) includes problems solvable on a PRAM in polylogarithmic time (O(log^k n)) with a polynomial number of processors (n^O(1)).[^8] This class represents problems considered to be highly parallelizable.
@@ -60,6 +90,43 @@ Computation in the BSP model proceeds in a sequence of **supersteps**. Each supe
 3.  **Barrier Synchronization:** A global barrier ensures all processors have completed their computation and communication. After the barrier, all messages are guaranteed to have arrived, and the next superstep begins.
 
 This structure enforces a bulk-synchronous programming style, which simplifies reasoning about the program's state and avoids issues like deadlock.[^15]
+
+#### Example: BSP Program Structure
+
+```pseudo
+Algorithm: BSP_VectorAddition(A[1..n], B[1..n], p processors)
+Input: Vectors A and B, each of length n
+Output: Vector C = A + B
+
+// Each processor gets n/p elements
+local_size = n / p
+
+for superstep = 1 to total_supersteps do
+    // Phase 1: Local Computation
+    parallel for each processor i do
+        start_idx = i * local_size
+        for j = 0 to local_size - 1 do
+            C[start_idx + j] = A[start_idx + j] + B[start_idx + j]
+        end
+    end parallel
+
+    // Phase 2: Communication (if needed for next superstep)
+    parallel for each processor i do
+        send(results_to_neighbors)
+        receive(data_from_neighbors)
+    end parallel
+
+    // Phase 3: Barrier Synchronization
+    barrier_sync()
+end
+
+return C
+```
+
+The cost model for this BSP algorithm would be:
+- Computation: w = n/p operations per processor
+- Communication: h = 0 (no inter-processor communication needed)
+- Synchronization: l (one barrier per superstep)
 
 #### Cost Analysis
 

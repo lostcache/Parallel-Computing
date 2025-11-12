@@ -15,6 +15,78 @@ A direct parallelization of merge sort involves executing the two recursive call
 
 A simple sequential merge creates a bottleneck. An advanced parallel merge algorithm can have each of the p available processors take an element from one sorted sub-array (A) and use binary search to find its correct position in the other sub-array (B). The final position of the element in the merged output is the sum of its indices in A and B. By performing this for all elements in parallel, the merge step can be executed efficiently.[^60] A scalable implementation for distributed memory often involves each of the p processors sorting a local chunk of n/p elements, followed by a tree-based merging phase where pairs of processors merge their sorted lists in successive rounds.[^61]
 
+```pseudo
+Algorithm: ParallelMergeSort(A[1..n], p processors)
+Input: Array A of n elements, p processors
+Output: Sorted array A
+
+function ParallelMerge(A, B, C, p)
+    // Parallel merge of sorted arrays A and B into C
+    n_a = length(A)
+    n_b = length(B)
+
+    parallel for i = 1 to n_a using p/2 processors do
+        // Find position of A[i] in B using binary search
+        pos_in_B = BinarySearch(B, A[i])
+        // Place A[i] in final position
+        C[i + pos_in_B] = A[i]
+    end parallel
+
+    parallel for j = 1 to n_b using p/2 processors do
+        // Find position of B[j] in A using binary search
+        pos_in_A = BinarySearch(A, B[j])
+        // Place B[j] in final position
+        C[j + pos_in_A] = B[j]
+    end parallel
+
+function ParallelMergeSortRecursive(A, start, end, threshold)
+    if (end - start) <= threshold then
+        SequentialSort(A, start, end)
+        return
+    end
+
+    mid = (start + end) / 2
+
+    // Fork: sort two halves in parallel
+    parallel
+        spawn ParallelMergeSortRecursive(A, start, mid, threshold)
+        spawn ParallelMergeSortRecursive(A, mid+1, end, threshold)
+    end parallel
+
+    // Join: merge sorted halves
+    ParallelMerge(A[start..mid], A[mid+1..end], A[start..end], p)
+
+// Main algorithm
+chunk_size = n / p
+
+// Phase 1: Each processor sorts its local chunk
+parallel for processor_id = 0 to p-1 do
+    start = processor_id * chunk_size
+    end = start + chunk_size - 1
+    SequentialSort(A, start, end)
+end parallel
+
+// Phase 2: Tree-based parallel merge
+for level = 1 to log(p) do
+    step = 2^level
+    parallel for i = 0 to p-1 step step do
+        if i + step/2 < p then
+            merge_start = i * chunk_size
+            merge_mid = (i + step/2) * chunk_size
+            merge_end = min((i + step) * chunk_size, n)
+            ParallelMerge(A[merge_start..merge_mid-1],
+                         A[merge_mid..merge_end-1],
+                         A[merge_start..merge_end-1], p)
+        end
+    end parallel
+end
+
+return A
+```
+
+Time Complexity: O((n/p)log(n/p) + n log p) = O((n log n)/p + n log p)
+Communication: O(log p) merge phases
+
 ### **Bitonic Sort**
 
 Bitonic sort is a parallel sorting algorithm based on the concept of a sorting network.[^62] A key feature of this algorithm is that the sequence of comparisons is fixed and does not depend on the input data, making it a **data-oblivious** algorithm. This property makes it well-suited for implementation in hardware and on highly parallel, synchronous architectures like GPUs.[^63]
@@ -27,6 +99,60 @@ The algorithm operates in two main phases, requiring the input size n to be a po
 2.  **Bitonic Merging:** The bitonic sequence is then sorted using a *bitonic merge* operation. This operation recursively compares and swaps elements at a distance of n/2, then n/4, and so on, until all elements are sorted. For a bitonic sequence `a`, comparing and swapping `a[i]` with `a[i + n/2]` for all `i < n/2` results in two smaller bitonic sequences, where all elements in the first half are smaller than all elements in the second half. These two halves are then sorted recursively in parallel.
 
 The parallel time complexity of bitonic sort is O(log² n) using O(n) processors.[^63] While it performs more total comparisons than algorithms like merge sort, its highly regular and data-independent communication pattern allows for efficient implementation on SIMD-style architectures where processors execute instructions in lock-step.[^64]
+
+```pseudo
+Algorithm: BitonicSort(A[0..n-1], p processors)
+Input: Array A of n elements (n must be power of 2)
+Output: Sorted array in ascending order
+
+function BitonicMerge(A, low, count, direction)
+    // direction: 1 for ascending, 0 for descending
+    if count > 1 then
+        k = count / 2
+
+        // Compare and swap elements at distance k
+        parallel for i = low to low + k - 1 do
+            if (direction == 1 and A[i] > A[i+k]) or
+               (direction == 0 and A[i] < A[i+k]) then
+                swap(A[i], A[i+k])
+            end
+        end parallel
+
+        // Recursively merge both halves
+        parallel
+            BitonicMerge(A, low, k, direction)
+            BitonicMerge(A, low + k, k, direction)
+        end parallel
+    end
+
+function BitonicSortRecursive(A, low, count, direction)
+    if count > 1 then
+        k = count / 2
+
+        // Sort first half in ascending order
+        // Sort second half in descending order
+        parallel
+            BitonicSortRecursive(A, low, k, 1)
+            BitonicSortRecursive(A, low + k, k, 0)
+        end parallel
+
+        // Merge the resulting bitonic sequence
+        BitonicMerge(A, low, count, direction)
+    end
+
+// Main execution
+BitonicSortRecursive(A, 0, n, 1)
+
+return A
+```
+
+Example execution for n=8:
+- Level 1: Create 4 bitonic sequences of size 2
+- Level 2: Merge into 2 bitonic sequences of size 4
+- Level 3: Final merge into 1 sorted sequence of size 8
+
+Total depth: log²(n) comparisons
+Parallelism: All comparisons at same distance can execute simultaneously
 
 ### **Sample Sort**
 
@@ -44,6 +170,85 @@ The algorithm proceeds in several distinct phases:[^65]
 6.  **Concatenation:** Because the splitters divide the entire key range, the sorted data across the processors is now globally sorted. The concatenation of the sorted buckets from processor 0 to p−1 forms the final sorted array.
 
 The success of sample sort depends on the quality of the splitters. By oversampling, the algorithm increases the probability that the splitters will partition the data into nearly equal-sized buckets, thus ensuring a balanced workload in the final local sort phase.[^65] This upfront investment in sampling and communication to achieve load balance makes sample sort highly scalable on distributed systems.
+
+```pseudo
+Algorithm: SampleSort(A[1..n], p processors)
+Input: Array A distributed across p processors
+Output: Globally sorted array
+
+// Parameters
+oversampling_factor = 10
+samples_per_processor = oversampling_factor * (p - 1)
+
+// Phase 1: Local sampling
+parallel for each processor i = 0 to p-1 do
+    local_data_size = n / p
+    local_samples[i] = []
+
+    for j = 1 to samples_per_processor do
+        // Random sampling from local data
+        random_index = random(0, local_data_size - 1)
+        local_samples[i].append(A[i][random_index])
+    end
+end parallel
+
+// Phase 2: Gather and select splitters
+all_samples = gather(local_samples)  // p * samples_per_processor samples
+sort(all_samples)
+
+// Select p-1 evenly spaced splitters
+splitters[1..p-1] = []
+for k = 1 to p-1 do
+    index = k * samples_per_processor * oversampling_factor
+    splitters[k] = all_samples[index]
+end
+
+// Phase 3: Broadcast splitters to all processors
+broadcast(splitters)
+
+// Phase 4: Local partitioning into buckets
+parallel for each processor i = 0 to p-1 do
+    buckets[i][0..p-1] = initialize_empty_buckets()
+
+    for each element in local_data[i] do
+        // Find which bucket this element belongs to
+        bucket_id = BinarySearch(splitters, element)
+        buckets[i][bucket_id].append(element)
+    end
+end parallel
+
+// Phase 5: All-to-all exchange (redistribution)
+parallel for each processor i = 0 to p-1 do
+    new_local_data[i] = []
+
+    // Send bucket j from processor i to processor j
+    for j = 0 to p-1 do
+        send(buckets[i][j], to_processor=j)
+    end
+
+    // Receive bucket i from all processors
+    for j = 0 to p-1 do
+        received = receive(from_processor=j)
+        new_local_data[i].append(received)
+    end
+end parallel
+
+// Phase 6: Local sort
+parallel for each processor i = 0 to p-1 do
+    SequentialSort(new_local_data[i])
+end parallel
+
+// Result: Concatenation of sorted data from processor 0 to p-1
+return concatenate(new_local_data[0], ..., new_local_data[p-1])
+```
+
+Time Complexity:
+- Sampling: O(samples_per_processor)
+- Local sort: O((n/p) log(n/p))
+- All-to-all: O(n/p) communication
+- Total: O((n/p) log(n/p) + n/p)
+
+Load Balance: Depends on quality of splitters (improved by oversampling)
 
 The choice among these algorithms reveals a fundamental trade-off between generality and architectural specialization. Parallel merge sort is a general-purpose algorithm that performs well on shared-memory systems. In contrast, bitonic sort and sample sort are more specialized. Bitonic sort's data-oblivious, regular structure is optimized for the synchronous, massively parallel nature of GPUs and custom hardware.[^63] Sample sort is tailored for distributed-memory clusters, with a design engineered to overcome high network latency and the need for load balancing across independent nodes.[^65] This demonstrates that in parallel computing, the optimal algorithm is a function of the target hardware.
 

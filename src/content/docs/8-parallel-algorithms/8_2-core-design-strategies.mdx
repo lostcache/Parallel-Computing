@@ -8,7 +8,59 @@ The foundational step in creating any parallel algorithm is **problem decomposit
 ### **Data Parallelism (Domain Decomposition)**
 
 Data parallelism, also known as domain decomposition, is a strategy that focuses on distributing the data across different processors. Each processor then performs the same operation, or sequence of operations, on its assigned subset of the data.32 This model is typically characterized by synchronous computation, where processors execute the same instructions in lock-step or in loosely synchronized phases.32  
-A canonical example of data parallelism is image processing. To apply a sharpening filter to a large image, the image can be divided into multiple tiles. Each processor receives one tile and independently applies the sharpening filter to the pixels within its tile.36 After all processors have completed their work, the processed tiles are reassembled to form the final sharpened image. Another fundamental example is vector addition, where for two vectors v and w, the operation z\[i\]←v\[i\]+w\[i\] for each element i is an independent computation that can be assigned to a different processor.6  
+A canonical example of data parallelism is image processing. To apply a sharpening filter to a large image, the image can be divided into multiple tiles. Each processor receives one tile and independently applies the sharpening filter to the pixels within its tile.36 After all processors have completed their work, the processed tiles are reassembled to form the final sharpened image. Another fundamental example is vector addition, where for two vectors v and w, the operation z\[i\]←v\[i\]+w\[i\] for each element i is an independent computation that can be assigned to a different processor.6
+
+#### Example: Data-Parallel Vector Addition
+
+```pseudo
+Algorithm: DataParallel_VectorAdd(v[1..n], w[1..n], p processors)
+Input: Vectors v and w of length n, p processors
+Output: Vector z where z[i] = v[i] + w[i]
+
+// Partition data among processors
+chunk_size = n / p
+
+parallel for processor_id = 0 to p-1 do
+    start = processor_id * chunk_size
+    end = start + chunk_size
+
+    for i = start to end-1 do
+        z[i] = v[i] + w[i]
+    end
+end parallel
+
+return z
+```
+
+Time Complexity: O(n/p) per processor
+Total Work: O(n)
+Communication: O(1) for distributing data and gathering results
+
+#### Example: Data-Parallel Image Processing
+
+```pseudo
+Algorithm: DataParallel_ImageFilter(Image[rows][cols], Filter, p processors)
+Input: Image matrix, convolution filter, p processors
+Output: Filtered image
+
+// Divide image into horizontal strips
+rows_per_processor = rows / p
+
+parallel for processor_id = 0 to p-1 do
+    start_row = processor_id * rows_per_processor
+    end_row = start_row + rows_per_processor
+
+    for row = start_row to end_row-1 do
+        for col = 0 to cols-1 do
+            // Apply filter to each pixel
+            filtered_image[row][col] = ApplyFilter(Image, Filter, row, col)
+        end
+    end
+end parallel
+
+return filtered_image
+```
+
 **Strengths:**
 
 * **Scalability:** Data-parallel applications often exhibit excellent scalability. As the dataset grows, performance can be maintained or improved by simply adding more processors to handle the additional data partitions.33  
@@ -22,8 +74,88 @@ A canonical example of data parallelism is image processing. To apply a sharpeni
 
 ### **Task Parallelism (Functional Decomposition)**
 
-Task parallelism, also known as functional decomposition, takes the complementary approach. It focuses on decomposing the computation itself into a collection of distinct tasks that can be executed concurrently.30 These tasks may perform different operations and can work on the same or different data. This model is often characterized by asynchronous execution, where tasks run independently and communicate with each other as needed to exchange data or synchronize.32  
-A classic example of task parallelism is a modern web server. One task might be responsible for listening for incoming network connections, another for fetching data from a database, a third for executing business logic, and a fourth for rendering the HTML response page.39 These tasks are functionally distinct and can run in parallel to serve multiple user requests simultaneously. Another example is a media player, where one task is dedicated to decoding the video stream while a separate, concurrent task decodes the audio stream.39  
+Task parallelism, also known as functional decomposition, takes the complementary approach. It focuses on decomposing the computation itself into a collection of distinct tasks that can be executed concurrently.30 These tasks may perform different operations and can work on the same or different data. This model is often characterized by asynchronous execution, where tasks run independently and communicate with each other as needed to exchange data or synchronize.32
+A classic example of task parallelism is a modern web server. One task might be responsible for listening for incoming network connections, another for fetching data from a database, a third for executing business logic, and a fourth for rendering the HTML response page.39 These tasks are functionally distinct and can run in parallel to serve multiple user requests simultaneously. Another example is a media player, where one task is dedicated to decoding the video stream while a separate, concurrent task decodes the audio stream.39
+
+#### Example: Task-Parallel Web Server
+
+```pseudo
+Algorithm: TaskParallel_WebServer()
+// Different tasks handle different functional components
+
+Task 1: ConnectionListener()
+    while server_running do
+        connection = accept_incoming_connection()
+        enqueue(request_queue, connection)
+    end
+
+Task 2: RequestHandler()
+    while server_running do
+        request = dequeue(request_queue)
+        parsed_request = parse_http_request(request)
+        enqueue(database_queue, parsed_request)
+    end
+
+Task 3: DatabaseWorker()
+    while server_running do
+        request = dequeue(database_queue)
+        data = fetch_from_database(request)
+        enqueue(response_queue, data)
+    end
+
+Task 4: ResponseRenderer()
+    while server_running do
+        data = dequeue(response_queue)
+        html = render_template(data)
+        send_http_response(html)
+    end
+
+// All tasks run concurrently and communicate via queues
+spawn_task(ConnectionListener)
+spawn_task(RequestHandler)
+spawn_task(DatabaseWorker)
+spawn_task(ResponseRenderer)
+```
+
+#### Example: Task-Parallel Media Processing
+
+```pseudo
+Algorithm: TaskParallel_MediaPlayer(video_file, audio_file)
+// Two independent tasks process different data streams
+
+shared buffer video_buffer, audio_buffer
+shared semaphore sync_semaphore
+
+Task 1: VideoDecoder()
+    while not end_of_video do
+        frame = decode_video_frame(video_file)
+        video_buffer.write(frame)
+        signal(sync_semaphore)  // Notify audio task
+    end
+
+Task 2: AudioDecoder()
+    while not end_of_audio do
+        audio_chunk = decode_audio_chunk(audio_file)
+        audio_buffer.write(audio_chunk)
+        wait(sync_semaphore)  // Synchronize with video
+    end
+
+Task 3: Renderer()
+    while playback_active do
+        frame = video_buffer.read()
+        audio = audio_buffer.read()
+        display(frame)
+        play(audio)
+    end
+
+// Spawn all tasks concurrently
+parallel
+    spawn_task(VideoDecoder)
+    spawn_task(AudioDecoder)
+    spawn_task(Renderer)
+end parallel
+```
+
 **Strengths:**
 
 * **Flexibility:** Task parallelism is highly flexible and can be applied to a wide variety of complex problems, especially those with functionally distinct and independent sub-problems.37  
