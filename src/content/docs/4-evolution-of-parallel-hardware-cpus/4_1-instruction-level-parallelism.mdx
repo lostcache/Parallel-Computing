@@ -8,9 +8,9 @@ import intel_netburst from '../../../assets/intel_netburst.png';
 
 Instruction-Level Parallelism (ILP) refers to the set of hardware-level techniques used to execute multiple instructions from a sequential program simultaneously within a single processor core. The primary objective of ILP is to increase the number of Instructions Per Cycle (IPC), thereby improving the performance of a single instruction stream. This section details the core techniques that enable ILP and examines the architectural limits of this paradigm through a case study of the Intel NetBurst™ microarchitecture.
 
-### **4.1.1 A Toolbox for Instruction-Level Parallelism**
+### **4.1.1 Techniques for Instruction-Level Parallelism**
 
-Modern processors employ a sophisticated combination of techniques to discover and exploit ILP. These techniques work together to keep the processor's multiple execution units as busy as possible.
+Modern processors employ a combination of techniques to discover and exploit ILP. These techniques work together to maximize the utilization of the processor's multiple execution units.
 
 **Table 4.1: Core Techniques for Achieving Instruction-Level Parallelism**
 
@@ -28,11 +28,11 @@ Modern processors employ a sophisticated combination of techniques to discover a
   </figcaption>
 </figure>
 
-Out-of-Order (OoO) execution is particularly critical for hiding latency. It decouples instruction fetching from execution using a hardware scheduler that dispatches ready instructions to available execution units. A reorder buffer (ROB) ensures that the results are committed in the original program order to maintain correctness, effectively finding useful work to perform while long-latency operations are pending.[^9]
+Out-of-Order (OoO) execution is a key technique for hiding latency. It decouples instruction fetching from execution using a hardware scheduler that dispatches ready instructions to available execution units. A reorder buffer (ROB) ensures that the results are committed in the original program order to maintain correctness, allowing the processor to execute other instructions while long-latency operations are pending.[^9]
 
 ### **4.1.2 Case Study: The NetBurst Microarchitecture and the Power Wall**
 
-The Intel NetBurst™ microarchitecture, which powered the Pentium 4 processor, represents a pivotal case study in the limits of ILP and frequency scaling. Its design was predicated on the assumption that extreme clock frequencies could overcome a lower IPC.
+The Intel NetBurst™ microarchitecture, which powered the Pentium 4 processor, represents a case study in the limits of ILP and frequency scaling. Its design was based on the assumption that high clock frequencies could compensate for a lower IPC.
 
 #### **Architectural Characteristics**
 
@@ -45,24 +45,24 @@ The Intel NetBurst™ microarchitecture, which powered the Pentium 4 processor, 
 
 The core design philosophy of NetBurst led to several key architectural decisions:
 
-*   **Hyper-Pipelined Technology:** To achieve high clock speeds, the instruction pipeline was made exceptionally deep. The initial "Willamette" core had a 20-stage pipeline, which was later extended to 31 stages in the "Prescott" core. This contrasts sharply with the 10-stage pipeline of its P6 predecessor.[^13]
-*   **IPC/Frequency Trade-Off:** The design explicitly traded a lower number of instructions per cycle for a much higher clock frequency. Intel projected that the architecture would scale to 10 GHz, at which point the high frequency would dominate the performance equation.[^13]
-*   **Advanced ILP Features:** To compensate for the IPC deficit, NetBurst included an advanced dynamic execution engine, a novel "Execution Trace Cache" to store decoded micro-operations, and a "Rapid Execution Engine" where simple integer ALUs ran at twice the core clock speed.[^12]
+*   **Hyper-Pipelined Technology:** To achieve high clock speeds, the instruction pipeline was made very deep. The initial "Willamette" core had a 20-stage pipeline, which was later extended to 31 stages in the "Prescott" core. This contrasts with the 10-stage pipeline of its P6 predecessor.[^13]
+*   **IPC/Frequency Trade-Off:** The design explicitly traded a lower number of instructions per cycle for a much higher clock frequency. Intel projected that the architecture would scale to 10 GHz, where the high frequency would be the dominant factor in performance.[^13]
+*   **Advanced ILP Features:** To compensate for the lower IPC, NetBurst included an advanced dynamic execution engine, an "Execution Trace Cache" to store decoded micro-operations, and a "Rapid Execution Engine" where simple integer ALUs ran at twice the core clock speed.[^12]
 
 #### **Consequences and Collision with the Power Wall**
 
-The pursuit of frequency at all costs had severe consequences:
+The pursuit of high frequency had several consequences:
 
-*   **Branch Misprediction Penalty:** The extremely deep pipeline meant that a single incorrect branch prediction was catastrophic. Flushing and refilling 20-31 pipeline stages incurred a massive cycle penalty, negating the benefits of the high clock speed.[^12]
-*   **The Power Wall:** The primary factor in NetBurst's failure was its power consumption. The combination of high frequencies and increasing transistor power leakage on the 90nm process node resulted in unsustainable power draw and heat generation. The Prescott core's Thermal Design Power (TDP) reached 115 watts for a single core, a figure that was difficult to manage with conventional cooling.[^13]
+*   **Branch Misprediction Penalty:** The deep pipeline meant that an incorrect branch prediction incurred a significant penalty. Flushing and refilling 20-31 pipeline stages incurred a large cycle penalty, reducing the benefits of the high clock speed.[^12]
+*   **The Power Wall:** A primary factor in NetBurst's limitations was its power consumption. The combination of high frequencies and increasing transistor power leakage on the 90nm process node resulted in high power draw and heat generation. The Prescott core's Thermal Design Power (TDP) reached 115 watts for a single core, a level that was difficult to manage with conventional cooling.[^13]
 
-The architecture that was designed to scale to 10 GHz hit a hard physical limit at 3.8 GHz, not due to logic design constraints, but because of the inability to power and cool the chip effectively.
+The architecture that was designed to scale to 10 GHz encountered a physical limit at 3.8 GHz, not due to logic design constraints, but because of the inability to power and cool the chip effectively.
 
 > *"With this microarchitecture, Intel planned to attain clock speeds of 10 GHz, but because of rising clock speeds, Intel faced increasing problems with keeping power dissipation within acceptable limits. Intel reached a speed barrier of 3.8 GHz in November 2004 but encountered problems trying to achieve even that... The reason for NetBurst's abandonment was the severe heat problems caused by high clock speeds."* [^13]
 
-#### **Legacy of NetBurst**
+#### **Legacy**
 
-The failure of the NetBurst microarchitecture was a watershed moment for the microprocessor industry. It served as a definitive and costly demonstration that the era of performance scaling through frequency alone was over. This failure directly catalyzed Intel's pivot to the "Core" microarchitecture, which abandoned the hyper-pipelined approach in favor of a wider, more power-efficient design that prioritized higher IPC at more modest clock speeds. This event marked the definitive industry-wide shift toward multi-core processors as the primary path forward for performance scaling.[^7]
+The limitations of the NetBurst microarchitecture were significant for the microprocessor industry. It demonstrated that performance scaling through frequency alone was no longer viable. This led to Intel's shift to the "Core" microarchitecture, which abandoned the deep pipeline approach in favor of a wider, more power-efficient design that prioritized higher IPC at lower clock speeds. This event marked the industry-wide shift toward multi-core processors as the primary path forward for performance scaling.[^7]
 
 ## References
 

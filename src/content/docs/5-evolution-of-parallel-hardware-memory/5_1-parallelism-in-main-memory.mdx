@@ -3,25 +3,14 @@ title: "5.1 Parallelism in Main Memory (RAM)"
 description: "A technical analysis of how modern memory systems achieve parallelism, from foundational concepts to the 3D integration of High Bandwidth Memory."
 ---
 
-The evolution of parallelism within main memory is a direct response to the persistent processor-memory performance gap. This section provides a technical analysis of the architectural and technological solutions developed to mitigate this bottleneck. It begins by defining the "memory wall" and explores the foundational abstract models and physical architectures that introduced parallelism into the memory subsystem. The analysis then covers the generational refinements of Double Data Rate (DDR) memory and culminates in an examination of High Bandwidth Memory (HBM), the 3D-stacked paradigm powering modern high-performance computing systems.
+The evolution of parallelism within main memory is a direct response to the persistent processor-memory performance gap, or "memory wall," a foundational challenge discussed in earlier chapters. This section provides a technical analysis of the architectural and technological solutions developed to mitigate this bottleneck.
 
-### **5.1.1 The "Memory Wall": A Quantitative Perspective**
+The challenge is rooted in two primary metrics of memory performance:
 
-The "memory wall" refers to the growing disparity between the rate of improvement in microprocessor performance and the slower rate of improvement in Dynamic Random-Access Memory (DRAM) performance.
-
-> In their seminal 1994 paper, William Wulf and Sally McKee articulated this challenge, noting that processor performance was improving at a much greater rate than memory performance, leading to a bottleneck where CPUs would increasingly sit idle, waiting for data.[^2]
-
-This divergence is illustrated by historical data:
-
-*   **CPU Performance Improvement (1986-2000):** ~55% annually.
-*   **Memory Performance Improvement (1986-2000):** ~10% annually.[^4]
-
-The advent of multi-core processors exacerbated this issue, concentrating demand from multiple processing cores onto a shared memory subsystem.[^1] This challenge is rooted in two primary metrics of memory performance:
-
-*   **Latency:** The time required to access a specific memory location (measured in nanoseconds). It is governed by the physical characteristics of DRAM cells and has remained relatively constant across memory generations.[^5]
+*   **Latency:** The time required to access a specific memory location (measured in nanoseconds). It is governed by the physical characteristics of DRAM cells and has proven difficult to improve significantly.[^5]
 *   **Bandwidth:** The rate at which data can be transferred after the initial access (measured in GB/s). It is a function of the memory bus width and clock frequency.
 
-While architectural innovations have successfully increased bandwidth, latency has proven more intractable. This persistent latency floor is why complex cache hierarchies are essential in modern processors, acting as a high-speed buffer to mitigate the high latency of main DRAM.
+While latency has proven difficult to overcome, decades of architectural innovation have focused on dramatically increasing memory bandwidth. This analysis covers the foundational concepts that introduced parallelism into the memory subsystem, the generational refinements of Double Data Rate (DDR) memory, and culminates in an examination of High Bandwidth Memory (HBM), the 3D-stacked paradigm powering modern high-performance computing systems.
 
 ### **5.1.2 Foundational Concepts: From PRAM to Physical Architectures**
 

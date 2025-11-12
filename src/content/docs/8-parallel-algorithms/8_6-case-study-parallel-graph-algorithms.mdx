@@ -3,57 +3,58 @@ title: "8.6 Case Study: Parallel Graph Algorithms"
 description: "Analyzing parallel approaches to fundamental graph problems and their computational complexity."
 ---
 
-Graph algorithms present a formidable challenge for parallel computing. Unlike the dense, regular data structures of matrices and arrays, graphs are fundamentally irregular, unstructured, and sparse. The performance of algorithms on these structures is often dictated not by the speed of arithmetic operations, but by the latency of memory access and network communication. This case study explores the unique difficulties of parallelizing graph algorithms and examines parallel approaches for three fundamental problems: breadth-first search (BFS), single-source shortest path (SSSP), and minimum spanning tree (MST).
+Graph algorithms present a significant challenge for parallel computing. Unlike the dense, regular data structures of matrices, graphs are fundamentally irregular, unstructured, and sparse. The performance of algorithms on these structures is often dictated not by arithmetic speed, but by memory access and network communication latency. This case study explores the difficulties of parallelizing graph algorithms and examines parallel approaches for three fundamental problems: breadth-first search (BFS), single-source shortest path (SSSP), and minimum spanning tree (MST).
 
-### **The Unique Challenge of Irregularity in Graphs**
+### **The Challenge of Irregularity in Graphs**
 
-The difficulty in achieving high performance for parallel graph algorithms stems from several inherent characteristics 79:
+The difficulty in achieving high performance for parallel graph algorithms stems from several inherent characteristics:[^79]
 
-* **Irregular Data Structures and Poor Memory Locality:** Graphs are often represented using pointer-based structures like adjacency lists. Traversing a graph involves "pointer chasing," which leads to random, unpredictable memory access patterns. This irregularity defeats the hardware mechanisms—such as caching and prefetching—that modern processors rely on to hide memory latency.79  
-* **Load Imbalance:** The structure of real-world graphs is often highly non-uniform. For example, in social networks, some vertices (celebrities) may have millions of connections, while most have only a few. This dramatic variation in vertex degree makes it nearly impossible to statically partition the graph in a way that gives each processor an equal amount of work.79  
-* **High Communication-to-Computation Ratio:** Graph algorithms are typically memory-bound rather than compute-bound. They tend to perform very few arithmetic operations for each vertex or edge they access. Consequently, the overall execution time is dominated by the cost of moving data, whether from main memory to the processor or between processors over a network.79
+*   **Irregular Data Structures and Poor Memory Locality:** Graphs are often represented using pointer-based structures like adjacency lists. Traversing a graph involves "pointer chasing," which leads to random, unpredictable memory access patterns. This irregularity defeats hardware mechanisms—such as caching and prefetching—that modern processors rely on to hide memory latency.[^79]
+*   **Load Imbalance:** The structure of real-world graphs is often highly non-uniform. For example, in social networks, some vertices may have millions of connections, while most have only a few. This variation in vertex degree makes it difficult to statically partition the graph in a way that gives each processor an equal amount of work.[^79]
+*   **High Communication-to-Computation Ratio:** Graph algorithms are typically memory-bound rather than compute-bound. They perform few arithmetic operations for each vertex or edge accessed. Consequently, execution time is dominated by the cost of moving data, whether from main memory to the processor or between processors over a network.[^79]
 
 ### **Graph Traversal: Parallel Breadth-First Search (BFS)**
 
-Breadth-First Search (BFS) is a fundamental algorithm for exploring a graph layer by layer from a starting vertex. Its parallelization is a classic example of the level-synchronous approach.83
+Breadth-First Search (BFS) is a fundamental algorithm for exploring a graph layer by layer from a starting vertex. Its parallelization is a classic example of the level-synchronous approach.[^83]
 
 #### **Methodology**
 
-The sequential BFS algorithm maintains a queue of vertices to visit. A parallel BFS algorithm replaces this single queue with the concept of a **frontier**, which is the set of all vertices at the current distance (or level) from the source. The algorithm proceeds in synchronous steps 83:
+The sequential BFS algorithm maintains a queue of vertices to visit. A parallel BFS algorithm replaces this single queue with a **frontier**, which is the set of all vertices at the current distance (or level) from the source. The algorithm proceeds in synchronous steps:[^83]
 
-1. Initialize the frontier to contain only the source vertex.  
-2. In parallel, each processor takes a subset of vertices from the current frontier.  
-3. For each vertex in its subset, the processor explores its neighbors. If a neighbor has not yet been visited, it is added to a local "next frontier."  
-4. A barrier synchronization occurs. The local next frontiers from all processors are combined to form the global next frontier for the subsequent step.  
-5. Repeat from step 2 until the frontier is empty.
+1.  Initialize the frontier to contain only the source vertex.
+2.  In parallel, each processor takes a subset of vertices from the current frontier.
+3.  For each vertex in its subset, the processor explores its neighbors. If a neighbor has not yet been visited, it is added to a local "next frontier."
+4.  A barrier synchronization occurs. The local next frontiers from all processors are combined to form the global next frontier for the subsequent step.
+5.  Repeat from step 2 until the frontier is empty.
 
-This process can be abstractly viewed as a sequence of sparse matrix-vector multiplications, where the matrix is the adjacency matrix of the graph and the vector represents the current frontier.85 The main challenge is the potential for severe load imbalance during the neighbor exploration step if some vertices in the frontier have vastly more neighbors than others. Optimization techniques focus on dynamic load balancing and reducing the cost of the global synchronization between levels.83
+This process can be viewed as a sequence of sparse matrix-vector multiplications, where the matrix is the graph's adjacency matrix and the vector represents the current frontier.[^85] The main challenge is the potential for severe load imbalance if some vertices in the frontier have vastly more neighbors than others. Optimization techniques focus on dynamic load balancing and reducing the cost of global synchronization between levels.[^83]
 
 ### **Single-Source Shortest Path (SSSP): Parallelizing Dijkstra's Algorithm**
 
-Dijkstra's algorithm finds the shortest paths from a single source to all other vertices in a weighted graph with non-negative edge weights. However, its standard implementation is inherently sequential.86
+Dijkstra's algorithm finds the shortest paths from a single source to all other vertices in a weighted graph with non-negative edge weights. Its standard implementation, however, is inherently sequential.[^86]
 
 #### **The Sequential Bottleneck**
 
-The core of Dijkstra's algorithm is a greedy strategy: in each step, it extracts the *one* vertex from a priority queue that has the globally minimum tentative distance from the source.87 This requirement to find the single global minimum creates a dependency that prevents the straightforward parallel processing of multiple vertices.
+The core of Dijkstra's algorithm is a greedy strategy: in each step, it extracts the one vertex from a priority queue that has the globally minimum tentative distance from the source.[^87] This requirement to find a single global minimum creates a dependency that prevents the straightforward parallel processing of multiple vertices.
 
 #### **Parallel Approaches**
 
 Parallelizing Dijkstra's requires relaxing this strict greedy constraint.
 
-* **Delta-Stepping Algorithm:** This is a widely used parallel SSSP algorithm. Instead of processing one vertex at a time, it processes vertices in "buckets." Each bucket corresponds to a range of distances of size Δ. In each phase, all vertices in the current lowest-indexed non-empty bucket can have their "light" edges (those with weight ≤Δ) relaxed in parallel. This introduces the possibility of redundant work (a vertex's distance may be updated multiple times), but it exposes a significant amount of parallelism by allowing many vertices to be processed concurrently.89  
-* **Data Parallelism:** A simpler but less scalable approach is to use data parallelism within each step of the sequential algorithm, for instance, by parallelizing the search for the minimum-distance vertex or the relaxation of edges using frameworks like OpenMP.90
+*   **Delta-Stepping Algorithm:** This is a widely used parallel SSSP algorithm. Instead of processing one vertex at a time, it processes vertices in "buckets," where each bucket corresponds to a range of distances of size Δ. In each phase, all "light" edges (those with weight ≤ Δ) connected to vertices in the current lowest-indexed non-empty bucket can be relaxed in parallel. This may introduce redundant work, but it exposes significant parallelism by allowing many vertices to be processed concurrently.[^89]
+*   **Data Parallelism:** A simpler but less scalable approach is to use data parallelism within each step of the sequential algorithm, for instance, by parallelizing the search for the minimum-distance vertex or the relaxation of edges using frameworks like OpenMP.[^90]
 
 ### **Minimum Spanning Tree (MST)**
 
-An MST of a weighted, undirected graph is a subgraph that connects all vertices with the minimum possible total edge weight. The parallelizability of MST algorithms depends heavily on their underlying greedy strategy.
+An MST of a weighted, undirected graph is a subgraph that connects all vertices with the minimum possible total edge weight. The parallelizability of MST algorithms depends on their underlying greedy strategy.
 
-* **Prim's Algorithm:** Prim's algorithm is very similar in structure to Dijkstra's. It grows a single MST by iteratively adding the cheapest edge that connects a vertex inside the growing tree to a vertex outside of it.91 This reliance on a single, global greedy choice makes it inherently sequential and difficult to parallelize effectively.92  
-* **Kruskal's Algorithm:** Kruskal's algorithm is more amenable to parallelism. It works by sorting all edges in the graph by weight and then adding edges from the sorted list if they do not form a cycle.94 The initial edge sorting step is highly parallelizable, as demonstrated in the sorting case study. The main sequential bottleneck is the cycle detection step, which typically uses a union-find data structure. While this step is challenging to parallelize, variants like Filter-Kruskal have been developed to improve performance by partitioning edges and filtering out those that are guaranteed to be in the same component.93  
-* **Boruvka's Algorithm:** This algorithm is often cited as the most naturally parallel MST algorithm. In each step, every vertex (or every existing component) simultaneously finds the cheapest edge connecting it to another vertex (or component), and all these edges are added to the MST. This process of finding local minimums and contracting components is repeated until a single tree remains. The ability for all components to make their greedy choice independently in each step exposes massive parallelism.91
+*   **Prim's Algorithm:** Prim's algorithm is structurally similar to Dijkstra's. It grows a single MST by iteratively adding the cheapest edge that connects a vertex inside the growing tree to a vertex outside of it.[^91] This reliance on a single, global greedy choice makes it inherently sequential and difficult to parallelize effectively.[^92]
+*   **Kruskal's Algorithm:** Kruskal's algorithm is more amenable to parallelism. It sorts all edges by weight and then adds edges from the sorted list if they do not form a cycle.[^94] The initial edge sorting is highly parallelizable. The main sequential bottleneck is the cycle detection step, which typically uses a union-find data structure. While this step is challenging to parallelize, variants like Filter-Kruskal have been developed to improve performance by partitioning edges and filtering out those guaranteed to be in the same component.[^93]
+*   **Boruvka's Algorithm:** This algorithm is often considered the most naturally parallel MST algorithm. In each step, every vertex (or component) simultaneously finds the cheapest edge connecting it to another vertex (or component), and all these edges are added to the MST. This process of finding local minimums and contracting components is repeated until a single tree remains. The ability for all components to make independent greedy choices in each step exposes massive parallelism.[^91]
 
-The challenges in parallelizing these graph algorithms reveal a deeper pattern: the degree of parallelism is often inversely related to the "greediness" of the sequential algorithm. Algorithms like Dijkstra's and Prim's, which rely on a single, globally optimal choice at each step, create sequential bottlenecks. In contrast, algorithms like BFS, which explores all options at a given level without a greedy choice, or Boruvka's, which allows for multiple *local* greedy choices to be made simultaneously, are far more parallelizable. To parallelize a strongly greedy algorithm often requires relaxing its strict criteria, as seen in the delta-stepping approach, effectively trading some sequential algorithmic elegance for parallel performance.  
-This leads to a fundamental paradigm shift for irregular problems. For regular problems like matrix multiplication, the goal of parallel algorithm design is often *static optimization*: creating a perfect, balanced decomposition of a predictable workload. For graphs, this is impossible. The most effective parallel graph algorithms are therefore designed not to eliminate irregularity, but to tolerate and adapt to it. They shift the focus from static data decomposition to *dynamic adaptation*, employing mechanisms like work-stealing, asynchronous communication, and dynamic tasking to manage an unpredictable and evolving workload efficiently.
+The challenges in parallelizing these graph algorithms reveal a deeper pattern: the degree of parallelism is often inversely related to the "greediness" of the sequential algorithm. Algorithms like Dijkstra's and Prim's, which rely on a single, globally optimal choice at each step, create sequential bottlenecks. In contrast, algorithms like BFS, which explores all options at a given level, or Boruvka's, which allows for multiple *local* greedy choices to be made simultaneously, are far more parallelizable. To parallelize a strongly greedy algorithm often requires relaxing its strict criteria, as seen in the delta-stepping approach, trading sequential algorithmic elegance for parallel performance.
+
+This leads to a fundamental paradigm shift for irregular problems. For regular problems like matrix multiplication, the goal of parallel algorithm design is often *static optimization*: creating a balanced decomposition of a predictable workload. For graphs, this is often impossible. The most effective parallel graph algorithms are therefore designed not to eliminate irregularity, but to tolerate and adapt to it. They shift the focus from static data decomposition to *dynamic adaptation*, employing mechanisms like work-stealing, asynchronous communication, and dynamic tasking to manage an unpredictable and evolving workload efficiently.
 
 ## References
 
@@ -63,7 +64,7 @@ This leads to a fundamental paradigm shift for irregular problems. For regular p
 [^4]: Parallel algorithms in shared memory \- Thomas Ropars, accessed October 6, 2025, [https://tropars.github.io/downloads/lectures/PAP/pap\_3\_shared\_memory\_algos.pdf](https://tropars.github.io/downloads/lectures/PAP/pap_3_shared_memory_algos.pdf)  
 [^5]: PRAM or Parallel Random Access Machines \- GeeksforGeeks, accessed October 6, 2025, [https://www.geeksforgeeks.org/computer-organization-architecture/pram-or-parallel-random-access-machines/](https://www.geeksforgeeks.org/computer-organization-architecture/pram-or-parallel-random-access-machines/)  
 [^6]: COMP 633: Parallel Computing PRAM Algorithms, accessed October 6, 2025, [https://www.cs.unc.edu/\~prins/Classes/633/Readings/pram.pdf](https://www.cs.unc.edu/~prins/Classes/633/Readings/pram.pdf)  
-[^7]: Parallel Random-Access Machines \- Computer Science, UWO, accessed October 6, 2025, [https://www.csd.uwo.ca/\~mmorenom/HPC-Slides/The\_PRAM\_model.pdf](https://www.csd.uwo.ca/~mmorenom/HPC-Slides/The_PRAM_model.pdf)  
+[^7]: Parallel Random-Access Machines \- Computer Science, UWO, accessed October 6, 2025, [https://www.csd.uwo.ca/\~mmorenom/HPC-Slides/The\_PRAM_model.pdf](https://www.csd.uwo.ca/~mmorenom/HPC-Slides/The_PRAM_model.pdf)  
 [^8]: A Survey of Parallel Algorithms for Shared-Memory Machines, accessed October 6, 2025, [https://www2.eecs.berkeley.edu/Pubs/TechRpts/1988/CSD-88-408.pdf](https://www2.eecs.berkeley.edu/Pubs/TechRpts/1988/CSD-88-408.pdf)  
 [^9]: A survey of parallel algorithms for shared-memory machines (Book) | OSTI.GOV, accessed October 6, 2025, [https://www.osti.gov/biblio/5805553](https://www.osti.gov/biblio/5805553)  
 [^10]: Parallel Computation Models \- Rice University, accessed October 6, 2025, [https://www.cs.rice.edu/\~vs3/comp422/lecture-notes/comp422-lec20-s08-v1.pdf](https://www.cs.rice.edu/~vs3/comp422/lecture-notes/comp422-lec20-s08-v1.pdf)  

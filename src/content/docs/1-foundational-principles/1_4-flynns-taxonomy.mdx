@@ -38,20 +38,20 @@ Multiple autonomous processors each fetch and execute their own instruction stre
 
 **Examples:** Most modern parallel systems use this architecture, including multi-core processors (Intel Core i7, AMD Ryzen), symmetric multiprocessing servers, supercomputer clusters, and distributed computing platforms (Amazon EC2, Google Cloud, SETI@home) [^20].
 
-## Flynn's Taxonomy at a Glance
+## Summary of Flynn's Taxonomy
 
-| Architecture | Description | Instruction Stream | Data Stream | Key Characteristics | Real-World Examples |
+| Architecture | Description | Instruction Stream | Data Stream | Key Characteristics | Examples |
 |:-------------|:------------|:------------------|:------------|:-------------------|:--------------------|
 | **SISD** | Single Instruction, Single Data | Single | Single | Sequential execution; uniprocessor. | Early PCs (Intel 386), simple microcontrollers. |
 | **SIMD** | Single Instruction, Multiple Data | Single | Multiple | Data-level parallelism; used for vector/matrix operations. | GPUs (NVIDIA, AMD), CPU extensions (AVX, NEON). |
 | **MISD** | Multiple Instruction, Single Data | Multiple | Single | Rare; used for fault tolerance via redundancy. | Space Shuttle flight control computers. |
 | **MIMD** | Multiple Instruction, Multiple Data | Multiple | Multiple | Supports task and data parallelism. | Multi-core CPUs, supercomputer clusters, cloud infrastructure. |
 
-## Modern Systems as Heterogeneous Hybrids
+## Heterogeneous Systems
 
 Modern high-performance systems typically combine multiple architecture types rather than implementing a single pure category. These **heterogeneous computing** systems incorporate multiple parallel models [^20].
 
-A modern supercomputer illustrates this hierarchy: at the top level, it is a MIMD system with thousands of interconnected nodes. Each node is also a MIMD system with a multi-core CPU where each core executes an independent thread. Within each CPU core are SIMD units (AVX vector engines) that perform data-parallel operations. Many nodes include GPU accelerators, which are SIMD engines.
+A modern supercomputer can be used to illustrate this hierarchy: at the highest level, it is a MIMD system with thousands of interconnected nodes. Each node is also a MIMD system with a multi-core CPU where each core executes an independent thread. Within each CPU core are SIMD units (AVX vector engines) that perform data-parallel operations. Many nodes also include GPU accelerators, which are fundamentally SIMD engines.
 
 Thus, a system can use MIMD parallelism at the cluster and multi-core level for task coordination and control flow, while using SIMD parallelism at the core and GPU level for data-parallel computations. Flynn's Taxonomy applies not only to classifying entire machines but also to understanding the different parallel execution models that coexist within a single system [^20].
 

@@ -6,19 +6,19 @@ import scalingAmdahl from '../../../assets/scaling_amdahl.png';
 import scalingGustafson from '../../../assets/scaling_gustafson.png';
 import comparisonGraph from '../../../assets/riken-amdahls-law-gustafsons-law-2d.jpg';
 
-The transition to parallel computing raises a critical question: how much performance improvement, or **speedup**, can be achieved by adding more processors? Intuitively, one might expect that using N processors would make a program run N times faster. However, the reality is far more complex. Two foundational laws, Amdahl's Law and Gustafson's Law, provide theoretical frameworks for answering this question. They offer different, and at first glance contradictory, perspectives on the potential of parallelization, stemming from their different underlying assumptions about the nature of the problem being solved.
+The transition to parallel computing raises a question: how much performance improvement, or **speedup**, can be achieved by adding more processors? It might be expected that using N processors would make a program run N times faster. However, the reality is more complex. Two foundational laws, Amdahl's Law and Gustafson's Law, provide theoretical frameworks for answering this question. They offer different, and seemingly contradictory, perspectives on the potential of parallelization, stemming from their different underlying assumptions about the nature of the problem being solved.
 
 ### Amdahl's Law: The Law of Diminishing Returns (Strong Scaling)
 
-Developed by computer architect Gene Amdahl in 1967, Amdahl's Law provides a formula for the theoretical maximum speedup of a task when its resources are improved [^26]. It was famously used as an argument *against* the feasibility of massively parallel processing, as it highlights a fundamental limit to the benefits of parallelization [^28].
+Developed by computer architect Gene Amdahl in 1967, Amdahl's Law provides a formula for the theoretical maximum speedup of a task when its resources are improved [^26]. It was used as an argument *against* the feasibility of massively parallel processing, as it highlights a limit to the benefits of parallelization [^28].
 
 #### Core Assumption
 
-The law is based on the assumption of a **fixed problem size**. The goal is to solve the exact same computational workload, but faster. This performance model is known as **strong scaling** [^27][^28].
+The law is based on the assumption of a **fixed problem size**. The goal is to solve the same computational workload, but faster. This performance model is known as **strong scaling** [^27][^28].
 
 #### The Serial Fraction
 
-Amdahl's Law recognizes that any program can be divided into two parts: a fraction that is perfectly parallelizable and a fraction that is inherently sequential and must be executed on a single processor. This sequential part includes tasks like program initialization, I/O operations, and parts of the algorithm that have data dependencies preventing parallel execution.
+Amdahl's Law recognizes that any program can be divided into two parts: a fraction that is parallelizable and a fraction that is inherently sequential and must be executed on a single processor. This sequential part includes tasks like program initialization, I/O operations, and parts of the algorithm that have data dependencies preventing parallel execution.
 
 #### Formula
 
@@ -32,7 +32,7 @@ Where $S$ is the proportion of the program's execution time that is serial, and 
 
 #### Implication
 
-The critical insight from this formula is that as the number of processors ($N$) approaches infinity, the $\frac{1-S}{N}$ term approaches zero. The maximum possible speedup is therefore capped at $\frac{1}{S}$ [^7]. This presents a pessimistic view of parallelism. For example, if a program has just 10% of its code that is inherently serial ($S = 0.1$), the maximum speedup that can ever be achieved is $\frac{1}{0.1} = 10\times$, regardless of whether 100 or 1,000,000 processors are used. This "law of diminishing returns" suggests that the serial portion of a program will always be the ultimate bottleneck, severely limiting the potential of massively parallel systems.
+The key implication of this formula is that as the number of processors ($N$) approaches infinity, the $\frac{1-S}{N}$ term approaches zero. The maximum possible speedup is therefore capped at $\frac{1}{S}$ [^7]. This presents a constrained view of parallelism. For example, if a program has 10% of its code that is inherently serial ($S = 0.1$), the maximum achievable speedup is $\frac{1}{0.1} = 10\times$, regardless of whether 100 or 1,000,000 processors are used. This "law of diminishing returns" suggests that the serial portion of a program will always be the ultimate bottleneck, limiting the potential of massively parallel systems.
 
 <a href="https://www.kth.se/blogs/pdc/2018/11/scalability-strong-and-weak-scaling/" target="_blank" rel="noopener noreferrer">
   <img src={scalingAmdahl.src} alt="Amdahl's Law graph showing speedup vs number of processors for different serial fractions, demonstrating diminishing returns as serial fraction increases." width="600" />
@@ -42,13 +42,13 @@ The critical insight from this formula is that as the number of processors ($N$)
 
 ### Gustafson's Law: Scaled Speedup (Weak Scaling)
 
-In 1988, John Gustafson, working on massively parallel supercomputers at Sandia National Laboratories, observed that the constraints described by Amdahl's Law did not match the performance he was seeing in practice. He proposed a different perspective, now known as Gustafson's Law (or Gustafson–Barsis's Law), which provides a more optimistic outlook for large-scale parallelism [^26].
+In 1988, John Gustafson, working on massively parallel supercomputers at Sandia National Laboratories, observed that the constraints described by Amdahl's Law did not align with empirical performance results. He proposed a different perspective, now known as Gustafson's Law (or Gustafson–Barsis's Law), which provides an alternative perspective for large-scale parallelism [^26].
 
 #### Core Assumption
 
-Gustafson's Law operates under the assumption that the **problem size scales with the number of processors**. The goal is not to do the same work faster, but to do *more* work in the same amount of time [^27]. This is common in scientific computing, where having more computational power allows researchers to run simulations with higher resolution, more particles, or for longer durations. This performance model is known as **weak scaling** [^30].
+Gustafson's Law operates under the assumption that the **problem size scales with the number of processors**. The goal is not to do the same work faster, but to perform *more* work in the same amount of time [^27]. This is common in scientific computing, where having more computational power allows researchers to run simulations with higher resolution, more particles, or for longer durations. This performance model is known as **weak scaling** [^30].
 
-#### Reframing the Serial Fraction
+#### Revisiting the Serial Fraction
 
 The law assumes that the amount of time spent in the serial part of a program remains constant, regardless of the problem size, while the parallelizable part of the workload grows proportionally with the number of processors [^27].
 
@@ -56,15 +56,15 @@ The law assumes that the amount of time spent in the serial part of a program re
 
 The formula for this "scaled speedup" is commonly written as:
 
-$$
+$$ 
 \text{Speedup}_{\text{scaled}} = N - S(N - 1)
-$$
+$$ 
 
 Where $S$ is the fraction of time spent in the serial portion of the program on the parallel system, and $N$ is the number of processors [^27].
 
 #### Implication
 
-This formula shows a simple linear relationship between the number of processors and the achievable speedup. If the serial fraction $S$ is small, the speedup is approximately $N$. This suggests that for problems that can scale their workload, there is no theoretical upper bound to the speedup that can be achieved by adding more processors. This provided the theoretical justification for building massively parallel machines, as it aligned with the practical goal of using more computing power to solve bigger, more detailed problems [^31].
+This formula shows a linear relationship between the number of processors and the achievable speedup. If the serial fraction $S$ is small, the speedup is approximately $N$. This suggests that for problems that can scale their workload, there is no theoretical upper limit to the speedup that can be achieved by adding more processors. This provided a theoretical justification for building massively parallel machines, as it aligned with the goal of using more computational resources to solve larger problems [^31].
 
 <a href="https://www.kth.se/blogs/pdc/2018/11/scalability-strong-and-weak-scaling/" target="_blank" rel="noopener noreferrer">
   <img src={scalingGustafson.src} alt="Gustafson's Law graph showing scaled speedup vs number of processors for different serial fractions, demonstrating near-linear scaling." width="600" />
@@ -72,11 +72,11 @@ This formula shows a simple linear relationship between the number of processors
 
 *Gustafson's Law visualization showing near-linear speedup growth with increasing processors when problem size scales accordingly. Image by Xin Li via [KTH PDC Blog](https://www.kth.se/blogs/pdc/2018/11/scalability-strong-and-weak-scaling/)*
 
-### The Synthesis: Two Laws, Two Perspectives
+### Synthesizing the Two Laws
 
-The apparent contradiction between Amdahl's and Gustafson's laws led to considerable debate. However, a careful analysis reveals that they are not contradictory. In fact, they are mathematically equivalent formulations that simply represent two different perspectives on performance, stemming from different assumptions and definitions [^28][^29].
+The apparent contradiction between Amdahl's and Gustafson's laws led to considerable debate. However, a careful analysis reveals that they are not contradictory, but are mathematically equivalent formulations representing two different perspectives on performance, stemming from different assumptions and definitions [^28][^29].
 
-The crucial difference lies in the reference frame used to define the serial fraction $S$.
+The primary difference is the reference frame used to define the serial fraction $S$.
 
 - Amdahl's Law defines $S$ as a fraction of the total execution time on a **single processor**. It is a fixed characteristic of the algorithm for a given problem size.
 - Gustafson's Law defines $S$ as a fraction of the total execution time on the **parallel system with $N$ processors**. As the problem size scales with $N$, the total amount of parallel work grows, making the fixed amount of serial work a smaller and smaller proportion of the total execution time.
@@ -91,7 +91,7 @@ This is the relevant metric for problems where the total problem size is fixed a
 
 This is the relevant metric for problems where the amount of work can be expanded to take advantage of more computational resources. The goal is to increase the problem's scale or fidelity (throughput) while keeping the execution time constant. This applies to scientific simulations, high-resolution computer graphics rendering, and large-scale data analysis [^30].
 
-The historical context of this debate reflects a broader evolution in the goals of computing itself. Amdahl's Law, from 1967, emerged from a mainframe-centric era focused on accelerating existing, well-defined business and computational tasks. Gustafson's Law, from 1988, was born from the world of national laboratory supercomputing, where the availability of more processing power did not just mean getting old answers faster; it meant being able to ask fundamentally new and bigger scientific questions—to analyze data "more carefully and fully" [^31]. The shift from an Amdahl-centric to a Gustafson-centric view of performance mirrors the evolution of high-performance computing from a tool for accelerating calculations to an indispensable instrument for scientific discovery and large-scale data exploration.
+The historical context of this debate reflects an evolution in computing goals. Amdahl's Law, from 1967, emerged from a mainframe-centric era focused on accelerating existing, well-defined business and computational tasks. Gustafson's Law, from 1988, originated from national laboratory supercomputing, where the availability of more processing power did not just mean obtaining results faster, but also addressing new and larger-scale scientific problems—to analyze data "more carefully and fully" [^31]. The shift from an Amdahl-centric to a Gustafson-centric view of performance mirrors the evolution of high-performance computing from a tool for accelerating calculations to a tool for scientific discovery and large-scale data exploration.
 
 <a href="https://www.nextplatform.com/2022/09/28/where-amdahls-law-and-gustafsons-law-slam-into-the-moores-law-wall/" target="_blank" rel="noopener noreferrer">
   <img src={comparisonGraph.src} alt="Direct comparison of Amdahl's Law and Gustafson's Law showing speedup factor vs observable parallel fraction of workload, illustrating the contrasting scaling behaviors." width="600" />
@@ -108,7 +108,7 @@ The historical context of this debate reflects a broader evolution in the goals 
 | **Definition of Serial Fraction ($S$)** | Proportion of runtime on a **single processor**. | Proportion of runtime on the **parallel system**. |
 | **Speedup Focus** | Strong Scaling (Time-constrained). | Weak Scaling (Problem-constrained). |
 | **Formula** | $\frac{1}{S + \frac{1-S}{N}}$ | $N - S(N - 1)$ |
-| **Implication for Max Speedup** | As $N \to \infty$, Speedup is limited to $\frac{1}{S}$. | Speedup grows linearly with $N$; no theoretical upper bound. |
+| **Implication for Max Speedup** | As $N \to \infty$, Speedup is limited to $\frac{1}{S}$. | Speedup grows linearly with $N$; no theoretical upper limit. |
 | **Primary Application Context** | Real-time systems, latency-sensitive applications. | Scientific simulation, big data analysis, high-fidelity modeling. |
 
 ## References
@@ -117,6 +117,6 @@ The historical context of this debate reflects a broader evolution in the goals 
 [^26]: Amdahl's Law and Gustafson's Law | PDF | Parallel Computing - Scribd, accessed September 30, 2025, [https://www.scribd.com/presentation/68721034/Amdahl-s-Law-and-Gustafson-s-law](https://www.scribd.com/presentation/68721034/Amdahl-s-Law-and-Gustafson-s-law)
 [^27]: The Performance of Parallel Algorithms by Amdahl's Law ..., accessed September 30, 2025, [http://www.ijcsit.com/docs/Volume%202/vol2issue6/ijcsit2011020660.pdf](http://www.ijcsit.com/docs/Volume%202/vol2issue6/ijcsit2011020660.pdf)
 [^28]: Reevaluating Amdahl's Law and Gustafson's Law - Temple CIS, accessed September 30, 2025, [https://cis.temple.edu/~shi/wwwroot/shi/public_html/docs/amdahl/amdahl.html](https://cis.temple.edu/~shi/wwwroot/shi/public_html/docs/amdahl/amdahl.html)
-[^29]: (PDF) Reevaluating Amdahl's law and Gustafson's law - ResearchGate, accessed September 30, 2025, [https://www.researchgate.net/publication/228367369_Reevaluating_Amdahl's_law_and_Gustafson's_law](https://www.researchgate.net/publication/228367369_Reevaluating_Amdahl%27s_law_and_Gustafson%27s_law)
+[^29]: (PDF) Reevaluating Amdahl's law and Gustafson's law - ResearchGate, accessed September 30, 2025, [https://www.researchgate.net/publication/228367369_Reevaluating_Amdahl%27s_law_and_Gustafson%27s_law](https://www.researchgate.net/publication/228367369_Reevaluating_Amdahl%27s_law_and_Gustafson%27s_law)
 [^30]: Amdahl's Law VS Gustafson's Law - Lei Mao's Log Book, accessed September 30, 2025, [https://leimao.github.io/blog/Amdahl-Law-VS-Gustafson-Law/](https://leimao.github.io/blog/Amdahl-Law-VS-Gustafson-Law/)
 [^31]: Gustafson's law - Wikipedia, accessed September 30, 2025, [https://en.wikipedia.org/wiki/Gustafson%27s_law](https://en.wikipedia.org/wiki/Gustafson%27s_law)

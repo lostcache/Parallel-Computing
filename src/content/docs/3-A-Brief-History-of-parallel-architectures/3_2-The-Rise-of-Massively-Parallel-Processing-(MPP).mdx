@@ -1,5 +1,5 @@
 ---
-title: "3.2 The Rise of Massively Parallel Processing (MPP)"
+title: "3.2 Massively Parallel Processing (MPP)"
 description: "A technical examination of the shift towards massive parallelism, focusing on the architecture and impact of the Connection Machine series."
 ---
 import CM12 from '../../../assets/CM-1-2.jpg';
@@ -9,15 +9,15 @@ import CM5BlockDiagram from '../../../assets/CM-5-block-diagram.png';
 import CM5ProcessorNodeDiagram from '../../../assets/cm-5-processor-node-diagram.webp';
 import CM12Arch from '../../../assets/cm-1-2-arch.png';
 
-In the landscape of high-performance computing during the 1980s, a significant paradigm shift occurred, moving away from the monolithic vector supercomputers, such as those designed by Cray, towards Massively Parallel Processing (MPP). The MPP philosophy posited that computational power could be scaled more effectively by coordinating a vast number of simple, commodity processors rather than engineering a single, increasingly complex and expensive processor.[^4] This section examines the rise of MPP through a case study of its most iconic exemplar: the Connection Machine.
+In the landscape of high-performance computing during the 1980s, a paradigm shift occurred, moving away from the monolithic vector supercomputers towards Massively Parallel Processing (MPP). The MPP philosophy was that computational power could be scaled by using a large number of simple processors, rather than a single, complex processor.[^4] This section examines the rise of MPP through a case study of a key example: the Connection Machine.
 
 ### Case Study: The Connection Machine
 
-The development of the Connection Machine at Thinking Machines Corporation (TMC), co-founded by W. Daniel "Danny" Hillis in 1983, represented a fundamental break from the prevailing von Neumann architecture.[^22] Hillis's doctoral research at MIT laid the groundwork for a machine inspired by the parallelism of the human brain, designed to execute a data-parallel programming model.[^4]
+The development of the Connection Machine at Thinking Machines Corporation (TMC), co-founded by W. Daniel "Danny" Hillis in 1983, differed from the prevailing von Neumann architecture.[^22] Hillis's doctoral research at MIT formed the basis for a machine designed for data-parallel computation.[^4]
 
 > **Defining Data Parallelism**
 >
-> The data parallel model is a programming paradigm in which parallelism is achieved by applying the same operation simultaneously to all elements of a large dataset. Instead of a single processor iterating through the data, the model assigns a simple processing element to each data point, allowing for massive parallel execution.[^25] This approach is particularly well-suited for problems with inherent data regularity, such as image processing, scientific simulations, and neural network training.[^28]
+> The data parallel model is a programming paradigm in which parallelism is achieved by applying the same operation simultaneously to all elements of a large dataset. Instead of a single processor iterating through the data, the model assigns a simple processing element to each data point, allowing for parallel execution.[^25] This approach is particularly well-suited for problems with inherent data regularity, such as image processing, scientific simulations, and neural network training.[^28]
 
 To support this model, TMC developed specialized programming languages, including C* and *Lisp, which provided high-level constructs for expressing data-parallel operations, abstracting the architectural complexity from the programmer.[^4]
 
@@ -38,13 +38,13 @@ The Connection Machine series underwent a significant architectural evolution, r
 
 #### **CM-1 and CM-2: The SIMD Hypercube**
 
-The initial models, the CM-1 and CM-2, were the purest embodiment of Hillis's original vision. Their key architectural features included:
+The initial models, the CM-1 and CM-2, were an embodiment of Hillis's original vision. Their key architectural features included:
 
 <figure style="margin: 2rem 0; text-align: center;">
     <div style="background-color: black; padding: 1rem; display: inline-block; border-radius: 0.25rem;">
         <img src={CM12.src} alt="The Connection Machine CM-2, a black cube with arrays of blinking red LEDs." width="400" />
     </div>
-    <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">The iconic 'cube-of-cubes' design of the Connection Machine. Image Credit: <a href="https://www.computerhistory.org/revolution/supercomputers/10/73/284" target="_blank" rel="noopener noreferrer">Computer History Museum</a></figcaption>
+    <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">The 'cube-of-cubes' design of the Connection Machine. Image Credit: <a href="https://www.computerhistory.org/revolution/supercomputers/10/73/284" target="_blank" rel="noopener noreferrer">Computer History Museum</a></figcaption>
 </figure>
 
 <figure style="margin: 2rem 0; text-align: center;">
@@ -55,11 +55,11 @@ The initial models, the CM-1 and CM-2, were the purest embodiment of Hillis's or
 </figure>
 
 *   **Massive Parallelism:** A full system contained 65,536 simple, bit-serial processors.
-*   **SIMD Execution:** A central sequencer broadcast a single instruction to all processors, which executed it in lockstep on their local data. This model was highly efficient for uniform operations across large datasets.
-*   **Hypercube Interconnect:** The processors were connected in a 12-dimensional hypercube topology. This network provided high-bandwidth, low-latency communication, crucial for algorithms requiring frequent data exchange between processors.[^5]
+*   **SIMD Execution:** A central sequencer broadcast a single instruction to all processors, which executed it synchronously on their local data. This model was highly efficient for uniform operations across large datasets.
+*   **Hypercube Interconnect:** The processors were connected in a 12-dimensional hypercube topology. This network provided high-bandwidth, low-latency communication, which is important for algorithms requiring frequent data exchange between processors.[^5]
 *   **Floating-Point Enhancement (CM-2):** The CM-2 augmented the architecture by adding a Weitek 3132 floating-point unit for every 32 processors, significantly improving performance on scientific and engineering calculations.[^21]
 
-The physical design, a cube of cubes with blinking LEDs representing processor activity, made the machine's computational process visible.[^4]
+The physical design was a cube composed of smaller cubes, with LEDs indicating processor activity.[^4]
 
 <figure style="margin: 2rem 0; text-align: center;">
     <div style="background-color: white; padding: 1rem; display: inline-block; border-radius: 0.25rem;">
@@ -68,9 +68,9 @@ The physical design, a cube of cubes with blinking LEDs representing processor a
     <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">The 12-dimensional hypercube interconnect of the Connection Machine. Image Credit: <a href="https://tamikothiel.com/theory/cm_txts/di-ch2.html" target="_blank" rel="noopener noreferrer">Tamiko Thiel</a></figcaption>
 </figure>
 
-#### **CM-5: The Pivot to MIMD and Commodity Processors**
+#### **CM-5: Shift to MIMD and Commodity Processors**
 
-The CM-5 marked a strategic pivot in response to the rapid performance gains of commodity RISC microprocessors.[^7]
+The CM-5 marked a strategic change in response to the rapid performance gains of commodity RISC microprocessors.[^7]
 
 <figure style="margin: 2rem 0; text-align: center;">
     <div style="background-color: black; padding: 1rem; display: inline-block; border-radius: 0.25rem;">
@@ -93,20 +93,20 @@ The CM-5 marked a strategic pivot in response to the rapid performance gains of 
     <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">Processor node diagram for CM5. Image Credit: <a href="https://www.slideshare.net/slideshow/connection-machine/3859624" target="_blank" rel="noopener noreferrer">Greg Faust, Mike Gibson and Sal Valente</a></figcaption>
 </figure>
 
-*   **MIMD Architecture:** The custom bit-serial processors were replaced with hundreds or thousands of standard Sun SPARC RISC processors. Each processor could execute an independent instruction stream, making the system a true MIMD machine.[^21]
+*   **MIMD Architecture:** The custom bit-serial processors were replaced with hundreds or thousands of standard Sun SPARC RISC processors. Each processor could execute an independent instruction stream, making the system a MIMD machine.[^21]
 *   **"Fat Tree" Network:** The hypercube was replaced with a scalable "fat tree" topology, which provided high bisection bandwidth and was better suited to the more varied communication patterns of a MIMD architecture.[^21]
 *   **Programming Continuity:** Despite the underlying MIMD hardware, the system was designed to efficiently support the data-parallel programming model, ensuring software continuity and simplifying the transition for developers.[^4]
 
 ### Impact and Legacy
 
-While Thinking Machines Corporation ultimately filed for bankruptcy in 1994, the Connection Machine series had a profound and lasting impact on high-performance computing.
+While Thinking Machines Corporation ultimately filed for bankruptcy in 1994, the Connection Machine series had a significant impact on high-performance computing.
 
-*   **Validation of MPP:** The CM series proved that massively parallel architectures could not only compete with but, in some cases, surpass the performance of traditional vector supercomputers. A CM-5 was ranked the world's fastest computer in 1993.[^4]
-*   **Pioneering Data Parallelism:** It popularized the data-parallel programming model, which remains a cornerstone of modern parallel computing, particularly in the context of GPUs.
-*   **Influence on Interconnects:** The sophisticated hypercube and fat tree networks spurred significant research and development in high-performance interconnects, a critical component of all modern supercomputers.
-*   **Scientific Breakthroughs:** CM-2 and CM-5 systems were instrumental in advancing research in fields such as quantum chromodynamics, oil reservoir simulation, and molecular dynamics.[^31]
+*   **Demonstration of MPP Viability:** The CM series demonstrated that massively parallel architectures could achieve performance comparable or superior to traditional vector supercomputers for certain applications. A CM-5 was ranked the world's fastest computer in 1993.[^4]
+*   **Popularizing Data Parallelism:** It popularized the data-parallel programming model, which remains a key concept in modern parallel computing, particularly in the context of GPUs.
+*   **Influence on Interconnects:** The hypercube and fat tree networks led to research and development in high-performance interconnects, a critical component of all modern supercomputers.
+*   **Scientific Applications:** CM-2 and CM-5 systems were used to advance research in fields such as quantum chromodynamics, oil reservoir simulation, and molecular dynamics.[^31]
 
-The ideas pioneered by TMC laid the conceptual groundwork for subsequent generations of supercomputers and demonstrated that harnessing the power of the many, rather than the few, was a viable and powerful path forward in high-performance computing.
+The concepts developed by TMC provided a foundation for subsequent supercomputer designs, demonstrating the viability of large-scale parallelism.
 
 ## References
 
