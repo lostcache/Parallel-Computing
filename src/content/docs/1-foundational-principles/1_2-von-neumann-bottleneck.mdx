@@ -31,7 +31,7 @@ The von Neumann bottleneck and the Memory Wall are not the same phenomenon, but 
 
 The combined impact of these issues is particularly acute for modern, data-intensive workloads. Applications in fields like Artificial Intelligence (AI), Machine Learning (ML), and big data analytics are characterized by their need to process enormous datasets [^9]. Training a large neural network, for example, can involve continuously moving billions or even trillions of model parameters (weights) between memory and the processing units [^9]. In such scenarios, the system spends the vast majority of its time and energy not on computation, but on shuttling data across the bottleneck [^11].
 
-This data movement is also extremely costly in terms of energy. The energy required to move a piece of data from DRAM to the CPU can be orders of magnitude greater than the energy required to perform a floating-point operation on that data [^9]. As a result, the von Neumann architecture is fundamentally inefficient for these tasks, leading to substantial energy consumption and acting as a major impediment to progress in AI computing [^9].
+This data movement is also extremely costly in terms of energy. **The energy required to move a piece of data from DRAM to the CPU can be orders of magnitude greater than the energy required to perform a floating-point operation on that data** [^9]. As a result, the von Neumann architecture is fundamentally inefficient for these tasks, leading to substantial energy consumption and acting as a major impediment to progress in AI computing [^9].
 
 ## Architectural Mitigations
 

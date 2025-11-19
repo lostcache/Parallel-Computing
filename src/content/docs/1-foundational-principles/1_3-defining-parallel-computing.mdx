@@ -12,7 +12,7 @@ The physical and architectural limitations inherent in the serial computing mode
 
 Fundamentally, parallel computing is a type of computation in which many calculations or processes are carried out simultaneously [^7]. It contrasts with the serial computing model, which dictates that instructions are executed sequentially, one after another, on a single processor [^6].
 
-The core principle of parallel computing is **decomposition** [^6]. A large, complex computational problem is broken down into smaller, discrete parts that can be solved concurrently [^6]. Each of these smaller parts is then assigned to a different processing element, which executes its portion of the algorithm simultaneously with the others [^6]. Finally, a coordination mechanism combines the individual results into a final solution [^6].
+**The core principle of parallel computing is decomposition** [^6]. A large, complex computational problem is broken down into smaller, discrete parts that can be solved concurrently [^6]. Each of these smaller parts is then assigned to a different processing element, which executes its portion of the algorithm simultaneously with the others [^6]. Finally, a coordination mechanism combines the individual results into a final solution [^6].
 
 For a problem to be suitable for parallel computing, it must exhibit characteristics that allow for this decomposition. It must be divisible into pieces of work that can be solved simultaneously, and the total time to solution must be less with multiple compute resources than with a single one [^6].
 
@@ -34,9 +34,11 @@ Parallel computers are built using several different hardware architectures, whi
 
 In this architecture, multiple processors or cores are contained within a single machine and are all connected to a single, globally accessible main memory [^19]. Any processor can directly access any memory location. This model simplifies programming, as processors communicate implicitly by reading and writing to the same memory locations. Most modern multi-core laptops, desktops, and smartphones are examples of shared memory parallel computers [^6].
 
+<div className="centered-image">
 <a href="https://www.sciencedirect.com/topics/computer-science/shared-memory-architecture" target="_blank" rel="noopener noreferrer">
-  <img src={sharedMemoryArch.src} alt="Basic shared memory architecture, showing both Uniform memory access (UMA) and Non-uniform memory access (NUMA) models." width="500" />
+  <img src={sharedMemoryArch.src} alt="Basic shared memory architecture, showing both Uniform memory access (UMA) and Non-uniform memory access (NUMA) models." width="700" />
 </a>
+</div>
 
 *Basic shared memory architecture. (a) Uniform memory access (UMA) architecture. (b) Non-uniform memory access (NUMA) architecture.*
 *Image Credit: [ScienceDirect](https://www.sciencedirect.com/topics/computer-science/shared-memory-architecture)*
@@ -45,9 +47,11 @@ In this architecture, multiple processors or cores are contained within a single
 
 This architecture connects multiple independent computers, often called nodes, via a high-speed network [^6]. Each node contains its own processor(s) and its own private, local memory. A processor in one node cannot directly access the memory of another node. Therefore, communication and data sharing must be handled explicitly by the programmer, typically by sending and receiving messages over the network [^6]. This model is highly scalable and forms the basis of most large-scale supercomputer clusters and cloud computing infrastructures [^19].
 
+<div className="centered-image">
 <a href="https://www.researchgate.net/publication/272377248_Overview_of_Trends_Leading_to_Parallel_Computing_and_Parallel_Programming" target="_blank" rel="noopener noreferrer">
-  <img src={distributedMemArch.src} alt="A diagram of a distributed memory system, showing multiple nodes with their own CPU and Memory, connected by a network." width="500" />
+  <img src={distributedMemArch.src} alt="A diagram of a distributed memory system, showing multiple nodes with their own CPU and Memory, connected by a network." width="700" />
 </a>
+</div>
 
 *A typical distributed memory architecture where each processor has its own private memory, and communication is handled over a network. Image Credit: [ResearchGate](https://www.researchgate.net/publication/272377248_Overview_of_Trends_Leading_to_Parallel_Computing_and_Parallel_Programming)*
 
@@ -55,9 +59,11 @@ This architecture connects multiple independent computers, often called nodes, v
 
 Modern high-performance computing (HPC) systems commonly use a hybrid architecture of the shared and distributed memory models [^18]. These systems are clusters of multiple nodes connected by a network (a distributed memory system). However, each individual node is itself a shared memory parallel computer, containing multiple cores that share access to that node's local memory [^6]. This hierarchical design allows programmers to use shared-memory programming techniques within a node and message-passing techniques for communication between nodes, offering a balance of programming convenience and scalability.
 
+<div className="centered-image">
 <a href="https://www.researchgate.net/publication/312593963_ADAPTIVE_PARALLEL_ELM_WITH_CONVOLUTIONAL_FEATURES_FOR_BIG_STREAM_DATA" target="_blank" rel="noopener noreferrer">
-  <img src={hybridMemArch.src} alt="Hybrid distributed-shared memory architecture showing multiple nodes connected via network, with each node containing multiple CPUs and shared memory." width="500" />
+  <img src={hybridMemArch.src} alt="Hybrid distributed-shared memory architecture showing multiple nodes connected via network, with each node containing multiple CPUs and shared memory." width="700" />
 </a>
+</div>
 
 *A hybrid distributed-shared memory architecture where multiple nodes (each with multiple CPUs and shared memory) are connected via a network, combining both shared memory within nodes and distributed memory across nodes. Image Credit: [ResearchGate](https://www.researchgate.net/publication/312593963_ADAPTIVE_PARALLEL_ELM_WITH_CONVOLUTIONAL_FEATURES_FOR_BIG_STREAM_DATA)*
 
