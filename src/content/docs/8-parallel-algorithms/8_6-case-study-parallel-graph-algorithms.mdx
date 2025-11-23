@@ -106,85 +106,66 @@ Parallelizing Dijkstra's requires relaxing this strict greedy constraint.
 *   **Data Parallelism:** A simpler but less scalable approach is to use data parallelism within each step of the sequential algorithm, for instance, by parallelizing the search for the minimum-distance vertex or the relaxation of edges using frameworks like OpenMP.[^90]
 
 ```pseudo
-Algorithm: DeltaStepping_SSSP(Graph G, source s, delta, p processors)
+Algorithm: DeltaStepping_SSSP(Graph G, source s, Δ, p processors)
 Input: Weighted graph G = (V, E), source s, parameter Δ, p processors
 Output: Shortest distances dist[v] from s to all vertices v
 
-// Initialize
+// Initialize distances
 parallel for all vertices v in V do
     dist[v] = ∞
 end parallel
-
 dist[s] = 0
 
-// Buckets: bucket[i] contains vertices with tentative distance in [i*Δ, (i+1)*Δ)
+// Buckets organize vertices by distance ranges [i*Δ, (i+1)*Δ)
 buckets = array of empty sets
 buckets[0].add(s)
-
-current_bucket_index = 0
+current_bucket = 0
 
 while exists non-empty bucket do
     // Find lowest non-empty bucket
-    while buckets[current_bucket_index] is empty do
-        current_bucket_index = current_bucket_index + 1
+    while buckets[current_bucket] is empty do
+        current_bucket = current_bucket + 1
     end
 
     // Process current bucket until empty
-    while buckets[current_bucket_index] is not empty do
-        current_set = buckets[current_bucket_index]
-        buckets[current_bucket_index] = empty
+    while buckets[current_bucket] is not empty do
+        current_set = buckets[current_bucket]
+        buckets[current_bucket] = empty
 
-        // Phase 1: Relax light edges (weight ≤ Δ) in parallel
-        parallel for each vertex v in current_set using p processors do
-            for each light edge (v, u) with weight w ≤ Δ do
+        // Relax light edges (weight ≤ Δ) in parallel
+        parallel for each vertex v in current_set do
+            for each edge (v, u) with weight(v, u) ≤ Δ do
                 new_dist = dist[v] + weight(v, u)
-
                 if new_dist < dist[u] then
-                    // Atomic update of distance
                     old_dist = atomic_min(dist[u], new_dist)
-
                     if old_dist > new_dist then
-                        // Remove u from old bucket (if present)
-                        old_bucket = floor(old_dist / Δ)
-                        buckets[old_bucket].remove(u)
-
-                        // Add u to new bucket
-                        new_bucket = floor(new_dist / Δ)
-                        buckets[new_bucket].add(u)
+                        move u from bucket[floor(old_dist/Δ)] to bucket[floor(new_dist/Δ)]
                     end
                 end
             end
         end parallel
-
         barrier()
     end
 
-    // Phase 2: Relax heavy edges (weight > Δ) once per bucket
+    // Relax heavy edges (weight > Δ) once per bucket
     parallel for each vertex v that was in current bucket do
-        for each heavy edge (v, u) with weight w > Δ do
+        for each edge (v, u) with weight(v, u) > Δ do
             new_dist = dist[v] + weight(v, u)
-
             if new_dist < dist[u] then
                 old_dist = atomic_min(dist[u], new_dist)
-
                 if old_dist > new_dist then
-                    old_bucket = floor(old_dist / Δ)
-                    buckets[old_bucket].remove(u)
-
-                    new_bucket = floor(new_dist / Δ)
-                    buckets[new_bucket].add(u)
+                    move u from bucket[floor(old_dist/Δ)] to bucket[floor(new_dist/Δ)]
                 end
             end
         end
     end parallel
-
     barrier()
 end
 
 return dist
 ```
 
-Time Complexity: O((|V| + |E|/Δ) × log|V|) expected
+Time Complexity: $O((|V| + |E|/\Delta) \times \log|V|)$ expected
 Parameter Δ: Trade-off between parallelism and redundant work
 - Small Δ: More buckets, less redundant work, less parallelism
 - Large Δ: Fewer buckets, more redundant work, more parallelism

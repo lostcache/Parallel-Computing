@@ -2,9 +2,6 @@
 title: "8.3 Common Parallel Algorithm Patterns"
 description: "Fundamental patterns and templates for designing efficient parallel algorithms."
 ---
-
-# 8.3 Common Parallel Algorithm Patterns
-
 While data and task parallelism provide high-level strategies, parallel algorithm patterns offer concrete, reusable templates for structuring parallel programs. These patterns encapsulate common computational structures and communication schemes, providing a higher level of abstraction than raw threads or message-passing calls.[^36] Three of the most influential patterns are MapReduce, Fork/Join, and Pipeline.
 
 ### The MapReduce Pattern
@@ -185,6 +182,19 @@ end parallel
 The performance of a pipeline is limited by its slowest stage, which determines the overall throughput.[^54] The pattern is used in CPU instruction execution, signal and image processing, data streaming analytics, and compilers.[^30]
 
 These patterns formalize different dependency structures. MapReduce is ideal for embarrassingly parallel tasks followed by a single aggregation. The Pipeline pattern is suited for problems with a linear dependency graph. The Fork/Join pattern is designed for problems with a recursive, hierarchical dependency graph. These patterns are also connected to the hardware architectures they were designed for. MapReduce is for large-scale, fault-tolerant distributed computing.[^44] Fork/Join is for shared-memory multi-core computing.[^50] The Pipeline pattern is more general but is fundamentally about optimizing throughput.
+
+| Feature | MapReduce | Fork/Join | Pipeline |
+| :---- | :---- | :---- | :---- |
+| **Core Concept** | Data-parallel model for batch processing large datasets using `Map` and `Reduce` functions.[^43] | Task-parallel model for executing recursive, divide-and-conquer algorithms.[^49] | Task-parallel model where data items flow through a sequence of processing stages.[^54] |
+| **Primary Goal** | Scalable processing of massive datasets with high fault tolerance. | Efficiently parallelize recursive algorithms on shared-memory multi-core systems. | Maximize throughput by overlapping execution of sequential stages. |
+| **Parallelism Type** | Primarily Data Parallelism. | Task Parallelism (Divide and Conquer). | Task Parallelism (Assembly Line). |
+| **Execution Flow** | `Map` -> `Shuffle & Sort` -> `Reduce`. Highly structured and synchronous between stages. | `Fork` (split task) -> `Recursive execution` -> `Join` (combine results). Asynchronous task execution. | Data items processed sequentially through `Stage 1` -> `Stage 2` -> ... -> `Stage N`. |
+| **Communication** | Handled implicitly by the framework during the shuffle/sort phase. | Handled implicitly by the framework through shared memory for task parameters and results. | Explicitly managed via queues or buffers between pipeline stages. |
+| **Key Challenge**| Handling data skew, designing efficient Map/Reduce functions, I/O bottleneck. | Determining the optimal sequential threshold, balancing work in non-uniform tasks. | Balancing the workload of each stage (slowest stage determines throughput), buffer management. |
+| **Hardware Target**| Distributed-memory systems, commodity clusters (e.g., Hadoop).[^44] | Shared-memory multi-core systems.[^50] | Shared-memory systems, or distributed systems for coarse-grained pipelines. |
+| **Ideal Use Cases**| Log processing, web indexing, data mining, scientific data analysis. | Parallel sorting (Quicksort, Mergesort), financial modeling, search algorithms. | Image/video processing, CPU instruction pipelines, stream analytics, compilers.[^30] |
+
+**Table 8.3.1: Comparative Analysis of Parallel Algorithm Patterns.** This table provides a side-by-side comparison of the three primary parallel algorithm patterns. It highlights their core concepts, typical use cases, and key architectural trade-offs, helping designers choose the right pattern for a given problem.[^30][^36]
 
 ## References
 

@@ -30,7 +30,7 @@ The synchronous, unit-time access of the PRAM model can lead to memory access co
     *   **Arbitrary CRCW:** If multiple processors write to the same location, an arbitrary one succeeds.
     *   **Priority CRCW:** Each processor has a unique priority, and the one with the highest priority succeeds in writing its value.
 
-A more powerful PRAM variant can simulate a weaker one. For example, a CRCW PRAM algorithm can be simulated on an EREW PRAM with the same number of processors, but with a time complexity increase of O(log P), where P is the number of processors.[^8]
+A more powerful PRAM variant can simulate a weaker one. For example, a CRCW PRAM algorithm can be simulated on an EREW PRAM with the same number of processors, but with a time complexity increase of $O(\log P)$, where P is the number of processors.[^8]
 
 #### Example: Parallel Maximum Finding on PRAM
 
@@ -60,13 +60,13 @@ end
 return local_max[1]
 ```
 
-This algorithm runs in O(log n) time with O(n) processors on a CREW PRAM, achieving optimal work efficiency of O(n).
+This algorithm runs in $O(\log n)$ time with $O(n)$ processors on a CREW PRAM, achieving optimal work efficiency of $O(n)$.
 
 #### Theoretical Significance and Limitations
 
-The PRAM model is primarily of theoretical significance. It serves as a benchmark for determining the maximum possible parallelism in a problem by ignoring physical constraints.[^7] Analyzing algorithms in the PRAM model allows for the classification of problems by their parallel complexity. For instance, the class **NC** (Nick's Class) includes problems solvable on a PRAM in polylogarithmic time (O(log^k n)) with a polynomial number of processors (n^O(1)).[^8] This class represents problems considered to be highly parallelizable.
+The PRAM model is primarily of theoretical significance. It serves as a benchmark for determining the maximum possible parallelism in a problem by ignoring physical constraints.[^7] Analyzing algorithms in the PRAM model allows for the classification of problems by their parallel complexity. For instance, the class **NC** (Nick's Class) includes problems solvable on a PRAM in polylogarithmic time ($O(\log^k n)$) with a polynomial number of processors ($n^{O(1)}$).[^8] This class represents problems considered to be highly parallelizable.
 
-However, the PRAM is an idealized model that is not physically realizable.[^8] The assumption of unit-time access to a global memory for any number of processors is a major limitation for practical application. A crossbar switch with O(PM) complexity would be required to connect P processors to M memory locations with constant-time access, which is prohibitively expensive and unscalable.[^10] By ignoring communication costs, PRAM algorithms can encourage fine-grained solutions with excessive communication, which perform poorly on real hardware where communication is more expensive than computation.[^14]
+However, the PRAM is an idealized model that is not physically realizable.[^8] The assumption of unit-time access to a global memory for any number of processors is a major limitation for practical application. A crossbar switch with $O(PM)$ complexity would be required to connect P processors to M memory locations with constant-time access, which is prohibitively expensive and unscalable.[^10] By ignoring communication costs, PRAM algorithms can encourage fine-grained solutions with excessive communication, which perform poorly on real hardware where communication is more expensive than computation.[^14]
 
 ### The Bulk Synchronous Parallel (BSP) Model
 
@@ -95,35 +95,27 @@ Algorithm: BSP_VectorAddition(A[1..n], B[1..n], p processors)
 Input: Vectors A and B, each of length n
 Output: Vector C = A + B
 
-// Each processor gets n/p elements
+// Divide work among processors
 local_size = n / p
 
-for superstep = 1 to total_supersteps do
-    // Phase 1: Local Computation
-    parallel for each processor i do
-        start_idx = i * local_size
-        for j = 0 to local_size - 1 do
-            C[start_idx + j] = A[start_idx + j] + B[start_idx + j]
-        end
-    end parallel
+// Superstep: Local Computation
+parallel for each processor i do
+    start_idx = i * local_size
+    for j = 0 to local_size - 1 do
+        C[start_idx + j] = A[start_idx + j] + B[start_idx + j]
+    end
+end parallel
 
-    // Phase 2: Communication (if needed for next superstep)
-    parallel for each processor i do
-        send(results_to_neighbors)
-        receive(data_from_neighbors)
-    end parallel
-
-    // Phase 3: Barrier Synchronization
-    barrier_sync()
-end
+// Barrier synchronization (all processors finish)
+barrier_sync()
 
 return C
 ```
 
 The cost model for this BSP algorithm would be:
-- Computation: w = n/p operations per processor
-- Communication: h = 0 (no inter-processor communication needed)
-- Synchronization: l (one barrier per superstep)
+- Computation: $w = n/p$ operations per processor
+- Communication: $h = 0$ (no inter-processor communication needed)
+- Synchronization: $l$ (one barrier)
 
 #### Cost Analysis
 
@@ -135,7 +127,7 @@ The BSP model uses a cost model to analyze algorithm performance. The total cost
 
 A superstep where the maximum number of words sent or received by any processor is h is called an h-relation. The cost for this superstep is:
 
-Cost_superstep = w + hg + l
+Cost_superstep = $$w + hg + l$$
 
 A BSP algorithm should balance the work (w) and communication (h) across processors and minimize the total number of supersteps, as each incurs a latency cost l.[^17]
 
@@ -149,12 +141,12 @@ The LogP model characterizes a parallel machine using four parameters:[^17]
 
 *   **L (Latency):** An upper bound on the delay for communicating a small message between processors.
 *   **o (Overhead):** The time a processor is engaged in transmitting or receiving a message, during which it cannot perform other computations.
-*   **g (Gap):** The minimum time interval between consecutive message transmissions or receptions at a processor. The reciprocal, 1/g, corresponds to the per-processor communication bandwidth.
+*   **g (Gap):** The minimum time interval between consecutive message transmissions or receptions at a processor. The reciprocal, $1/g$, corresponds to the per-processor communication bandwidth.
 *   **P (Processors):** The number of processor-memory modules.
 
 #### Analysis and Usage
 
-The LogP model allows for the design of algorithms that are aware of these physical constraints. For example, the time to send a small message can be modeled as 2o + L (overhead at sender, network latency, and overhead at receiver).[^17] The gap parameter, g, determines how quickly a processor can send messages.
+The LogP model allows for the design of algorithms that are aware of these physical constraints. For example, the time to send a small message can be modeled as $2o + L$ (overhead at sender, network latency, and overhead at receiver).[^17] The gap parameter, g, determines how quickly a processor can send messages.
 
 This level of detail enables reasoning about techniques like overlapping computation with communication, which is not captured by the simpler BSP model.[^24] The strength of LogP is its ability to guide the development of efficient, low-level communication routines.[^17] However, this fidelity increases the complexity of analysis. The model is most accurate at the machine-instruction level and can be less precise for systems with complex communication protocols.[^17] Extensions like **LogGP** have been introduced to model the per-byte cost for long messages by adding a parameter G.[^24]
 

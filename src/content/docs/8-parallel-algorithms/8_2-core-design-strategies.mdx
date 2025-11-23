@@ -3,12 +3,12 @@ title: "8.2 Core Design Strategies: Data vs. Task Parallelism"
 description: "Fundamental approaches to decomposing problems for parallel execution."
 ---
 
-The foundational step in creating any parallel algorithm is **problem decomposition**—the process of breaking a large computational problem into smaller pieces that can be solved concurrently.1 This decomposition can be approached from two distinct perspectives: one can either partition the data on which the computation operates, or one can partition the computation itself. These two approaches give rise to the two fundamental strategies in parallel algorithm design: **data parallelism** and **task parallelism**.30
+The foundational step in creating any parallel algorithm is **problem decomposition**—the process of breaking a large computational problem into smaller pieces that can be solved concurrently.[^1] This decomposition can be approached from two distinct perspectives: one can either partition the data on which the computation operates, or one can partition the computation itself. These two approaches give rise to the two fundamental strategies in parallel algorithm design: **data parallelism** and **task parallelism**.[^30]
 
 ### **Data Parallelism (Domain Decomposition)**
 
-Data parallelism, also known as domain decomposition, is a strategy that focuses on distributing the data across different processors. Each processor then performs the same operation, or sequence of operations, on its assigned subset of the data.32 This model is typically characterized by synchronous computation, where processors execute the same instructions in lock-step or in loosely synchronized phases.32  
-A canonical example of data parallelism is image processing. To apply a sharpening filter to a large image, the image can be divided into multiple tiles. Each processor receives one tile and independently applies the sharpening filter to the pixels within its tile.36 After all processors have completed their work, the processed tiles are reassembled to form the final sharpened image. Another fundamental example is vector addition, where for two vectors v and w, the operation z\[i\]←v\[i\]+w\[i\] for each element i is an independent computation that can be assigned to a different processor.6
+Data parallelism, also known as domain decomposition, is a strategy that focuses on distributing the data across different processors. Each processor then performs the same operation, or sequence of operations, on its assigned subset of the data.[^32] This model is typically characterized by synchronous computation, where processors execute the same instructions in lock-step or in loosely synchronized phases.[^32]
+A canonical example of data parallelism is image processing. To apply a sharpening filter to a large image, the image can be divided into multiple tiles. Each processor receives one tile and independently applies the sharpening filter to the pixels within its tile.[^36] After all processors have completed their work, the processed tiles are reassembled to form the final sharpened image. Another fundamental example is vector addition, where for two vectors v and w, the operation z\[i\]←v\[i\]+w\[i\] for each element i is an independent computation that can be assigned to a different processor.[^6]
 
 #### Example: Data-Parallel Vector Addition
 
@@ -63,19 +63,19 @@ return filtered_image
 
 **Strengths:**
 
-* **Scalability:** Data-parallel applications often exhibit excellent scalability. As the dataset grows, performance can be maintained or improved by simply adding more processors to handle the additional data partitions.33  
-* **Simplicity:** The programming model is often simpler because only one program needs to be written, which is then executed by all processors on their respective data (a style known as Single Program, Multiple Data or SPMD).37  
-* **Load Balancing:** For uniformly distributed data, this approach naturally leads to good load balancing, as each processor is assigned an equal amount of work.32
+* **Scalability:** Data-parallel applications often exhibit excellent scalability. As the dataset grows, performance can be maintained or improved by simply adding more processors to handle the additional data partitions.[^33]
+* **Simplicity:** The programming model is often simpler because only one program needs to be written, which is then executed by all processors on their respective data (a style known as Single Program, Multiple Data or SPMD).[^37]
+* **Load Balancing:** For uniformly distributed data, this approach naturally leads to good load balancing, as each processor is assigned an equal amount of work.[^32]
 
 **Weaknesses:**
 
-* **Limited Applicability:** This strategy is only effective for problems where the same operations can be applied to all data partitions. It is less suitable for algorithms with complex, data-dependent control flow.37  
-* **Communication Overhead:** While the computation is parallel, there is often a need for communication to distribute the initial data and, more significantly, to combine or aggregate the partial results at the end. This final reduction or synchronization step can become a bottleneck, especially with a large number of processors.37
+* **Limited Applicability:** This strategy is only effective for problems where the same operations can be applied to all data partitions. It is less suitable for algorithms with complex, data-dependent control flow.[^37]
+* **Communication Overhead:** While the computation is parallel, there is often a need for communication to distribute the initial data and, more significantly, to combine or aggregate the partial results at the end. This final reduction or synchronization step can become a bottleneck, especially with a large number of processors.[^37]
 
 ### **Task Parallelism (Functional Decomposition)**
 
-Task parallelism, also known as functional decomposition, takes the complementary approach. It focuses on decomposing the computation itself into a collection of distinct tasks that can be executed concurrently.30 These tasks may perform different operations and can work on the same or different data. This model is often characterized by asynchronous execution, where tasks run independently and communicate with each other as needed to exchange data or synchronize.32
-A classic example of task parallelism is a modern web server. One task might be responsible for listening for incoming network connections, another for fetching data from a database, a third for executing business logic, and a fourth for rendering the HTML response page.39 These tasks are functionally distinct and can run in parallel to serve multiple user requests simultaneously. Another example is a media player, where one task is dedicated to decoding the video stream while a separate, concurrent task decodes the audio stream.39
+Task parallelism, also known as functional decomposition, takes the complementary approach. It focuses on decomposing the computation itself into a collection of distinct tasks that can be executed concurrently.[^30] These tasks may perform different operations and can work on the same or different data. This model is often characterized by asynchronous execution, where tasks run independently and communicate with each other as needed to exchange data or synchronize.[^32]
+A classic example of task parallelism is a modern web server. One task might be responsible for listening for incoming network connections, another for fetching data from a database, a third for executing business logic, and a fourth for rendering the HTML response page.[^39] These tasks are functionally distinct and can run in parallel to serve multiple user requests simultaneously. Another example is a media player, where one task is dedicated to decoding the video stream while a separate, concurrent task decodes the audio stream.[^39]
 
 #### Example: Task-Parallel Web Server
 
@@ -158,19 +158,19 @@ end parallel
 
 **Strengths:**
 
-* **Flexibility:** Task parallelism is highly flexible and can be applied to a wide variety of complex problems, especially those with functionally distinct and independent sub-problems.37  
-* **Improved Resource Utilization:** By assigning different types of tasks to different processors, it is possible to keep all available computational resources busy, even if the problem does not have a regular, data-parallel structure.40
+* **Flexibility:** Task parallelism is highly flexible and can be applied to a wide variety of complex problems, especially those with functionally distinct and independent sub-problems.[^37]
+* **Improved Resource Utilization:** By assigning different types of tasks to different processors, it is possible to keep all available computational resources busy, even if the problem does not have a regular, data-parallel structure.[^40]
 
 **Weaknesses:**
 
-* **Complexity:** Managing and scheduling tasks, especially when there are complex dependencies between them, significantly increases the complexity of the program. The programmer is often responsible for identifying tasks, managing their dependencies, and ensuring correct synchronization.37  
-* **Load Balancing:** Achieving good load balancing is much more difficult than in data parallelism. Tasks may have different and unpredictable execution times, requiring sophisticated dynamic scheduling algorithms to distribute work evenly and prevent processors from becoming idle.32  
-* **Communication:** Inter-task communication can be complex and a major source of overhead. It can also introduce subtle programming errors such as race conditions and deadlocks if not managed carefully.37
+* **Complexity:** Managing and scheduling tasks, especially when there are complex dependencies between them, significantly increases the complexity of the program. The programmer is often responsible for identifying tasks, managing their dependencies, and ensuring correct synchronization.[^37]
+* **Load Balancing:** Achieving good load balancing is much more difficult than in data parallelism. Tasks may have different and unpredictable execution times, requiring sophisticated dynamic scheduling algorithms to distribute work evenly and prevent processors from becoming idle.[^32]
+* **Communication:** Inter-task communication can be complex and a major source of overhead. It can also introduce subtle programming errors such as race conditions and deadlocks if not managed carefully.[^37]
 
 ### **The Continuum and Hybrid Approaches**
 
-In practice, few large-scale applications are purely data-parallel or purely task-parallel. Most fall somewhere on a continuum between the two extremes.32 Moreover, the two strategies can be combined in a **hybrid parallelism** approach to exploit parallelism at multiple levels.  
-A prime example of a hybrid approach is found in global climate modeling. The simulation space (Earth's atmosphere and oceans) is typically decomposed into a massive 3D grid. The computation of physical quantities like temperature and pressure at each grid point is performed using data parallelism. Concurrently, different, functionally distinct models—such as one for atmospheric dynamics and another for ocean currents—are executed as separate tasks that interact with each other, representing task parallelism.32  
+In practice, few large-scale applications are purely data-parallel or purely task-parallel. Most fall somewhere on a continuum between the two extremes.[^32] Moreover, the two strategies can be combined in a **hybrid parallelism** approach to exploit parallelism at multiple levels.
+A prime example of a hybrid approach is found in global climate modeling. The simulation space (Earth's atmosphere and oceans) is typically decomposed into a massive 3D grid. The computation of physical quantities like temperature and pressure at each grid point is performed using data parallelism. Concurrently, different, functionally distinct models—such as one for atmospheric dynamics and another for ocean currents—are executed as separate tasks that interact with each other, representing task parallelism.[^32]
 The choice between a data-parallel and a task-parallel strategy is a key design decision. Data parallelism requires a focus on data distribution, partitioning, and efficient aggregation of results. The main challenges are managing data locality and minimizing communication volume. Task parallelism requires identifying independent functions, managing task dependencies, designing effective dynamic schedulers, and implementing safe inter-task communication and synchronization.[^41]
 
 Both strategies are governed by the concept of **granularity**, which is the ratio of computation to communication.[^1] For either model to be efficient, the amount of work in a parallel unit must be large enough to amortize the associated overhead. In data parallelism, this is achieved through **agglomeration**, where fine-grained data elements are grouped into larger chunks.[^42] In task parallelism, this means defining tasks that perform a substantial amount of computation before needing to communicate. An algorithm that is too fine-grained will be dominated by overhead and will not perform well on real hardware.
@@ -185,7 +185,7 @@ Both strategies are governed by the concept of **granularity**, which is the rat
 | **Scalability Driver** | Amount of parallelization is proportional to the input data size. | Amount of parallelization is proportional to the number of independent tasks. |
 | **Ideal Use Cases** | Image processing, matrix operations, scientific simulations on regular grids, large-scale data processing (e.g., search). | Web servers, GUI applications, pipeline processing, complex workflows with functionally distinct modules. |
 
-**Table 8.2.1: Comparative Analysis of Data and Task Parallelism.** This table provides a side-by-side comparison of the two core parallel design strategies, highlighting their fundamental differences in approach, typical execution models, primary engineering challenges, and ideal application domains.32
+**Table 8.2.1: Comparative Analysis of Data and Task Parallelism.** This table provides a side-by-side comparison of the two core parallel design strategies, highlighting their fundamental differences in approach, typical execution models, primary engineering challenges, and ideal application domains.[^32]
 
 ## References
 

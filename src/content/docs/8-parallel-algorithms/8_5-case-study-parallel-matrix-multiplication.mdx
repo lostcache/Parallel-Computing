@@ -93,42 +93,30 @@ Algorithm: SUMMA(A[n×n], B[n×n], p_rows × p_cols processor grid)
 Input: Matrices A and B of size n×n, processor grid p_rows × p_cols
 Output: Matrix C = A × B
 
-// Processor P(i,j) is responsible for computing block C(i,j)
-// A is distributed by rows, B by columns
-
-block_rows = n / p_rows
-block_cols = n / p_cols
-block_size = n / √p  // For simplicity, assume square blocks
+block_size = n / √p
+num_panels = n / block_size
 
 // Initialize result blocks
 parallel for each processor P(i, j) do
     C_local[i][j] = 0
 end parallel
 
-// Outer loop: iterate over panels
-num_panels = n / block_size
-
+// Iterate over panels and accumulate partial products
 for k = 0 to num_panels - 1 do
     parallel for each processor P(i, j) do
-        // Broadcast panel of A horizontally
+        // Broadcast k-th column of A horizontally across row i
         if j == owner_of_column_k then
-            // This processor owns the k-th block column of A
             A_panel = A_local[i][k]
         end
-
-        // Broadcast A_panel to all processors in row i
         A_panel = broadcast_along_row(A_panel, row=i)
 
-        // Broadcast panel of B vertically
+        // Broadcast k-th row of B vertically down column j
         if i == owner_of_row_k then
-            // This processor owns the k-th block row of B
             B_panel = B_local[k][j]
         end
-
-        // Broadcast B_panel to all processors in column j
         B_panel = broadcast_along_column(B_panel, column=j)
 
-        // Rank-k update: local computation
+        // Local multiplication and accumulation
         C_local[i][j] = C_local[i][j] + (A_panel × B_panel)
     end parallel
 end
@@ -144,9 +132,9 @@ Example for 4×4 processors:
   - Continue accumulating partial products
 
 Time Complexity:
-- Computation: O(n³/p)
-- Communication: O(k/b × n²/√p) broadcasts where k is matrix dimension
-- Memory per processor: O(n²/p)
+- Computation: $O(n^3/p)$
+- Communication: $O(k/b \times n^2/\sqrt{p})$ broadcasts where k is matrix dimension
+- Memory per processor: $O(n^2/p)$
 
 ### **Performance Analysis and Comparison**
 
