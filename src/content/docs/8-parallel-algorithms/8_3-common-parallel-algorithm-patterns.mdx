@@ -20,6 +20,9 @@ The MapReduce workflow proceeds through a sequence of defined stages:[^43]
 
 The strength of MapReduce lies in its scalability and fault tolerance. It allows programmers to focus on the Map and Reduce logic, while the framework handles the distribution of work and recovery from node failures.[^45]
 
+![The MapReduce Programming Model](/src/assets/The-MapReduce-Programming-Model.png)
+Credit: Asadianfam, Shiva & Shamsi, Mahboubeh & Rasouli Kenari, Abdolreza. (2021). TVD-MRDL: traffic violation detection system using MapReduce-based deep learning for large-scale data. Multimedia Tools and Applications. 80. 1-28. 10.1007/s11042-020-09714-8.[^95]
+
 #### Example: Word Count with MapReduce
 
 ```pseudo
@@ -78,6 +81,9 @@ The pattern's execution flow mirrors the recursive nature of divide-and-conquer 
 
 A key implementation detail that makes the Fork/Join pattern efficient is its use of a **work-stealing scheduler**.[^52] A pool of worker threads is created (typically one per CPU core), and each thread maintains its own double-ended queue (deque) of tasks. When a thread's deque is empty, it "steals" a task from the tail of another thread's deque. This provides dynamic load balancing, ensuring that all cores remain busy.[^53] This pattern is well-suited for problems like parallel merge sort and quicksort.[^50]
 
+![Fork-Join Model](/src/assets/fork_join.png)
+Credit: https://en.wikipedia.org/wiki/Fork-join_model
+
 #### Example: Fork/Join Parallel Sum
 
 ```pseudo
@@ -129,6 +135,9 @@ A pipeline consists of three main components:[^55]
 3.  **Sink:** The exit point that consumes the final processed data items.
 
 Parallelism is achieved through temporal concurrency. While Stage 1 is processing data item `i+1`, Stage 2 can simultaneously process data item `i`, and Stage 3 can process item `i-1`. After an initial "fill" period, all stages of the pipeline can be active at once, each working on a different data item.[^54] This structure is ideal for increasing the **throughput** (the rate at which data items are processed), though it does not necessarily reduce the **latency** (the time for a single data item to pass through the pipeline).
+
+![Pipeline Parallelism](/src/assets/pipeline_parallelism.png)
+Credit: https://patterns.eecs.berkeley.edu/?page_id=542
 
 #### Example: Pipeline Pattern for Image Processing
 
@@ -292,3 +301,6 @@ These patterns formalize different dependency structures. MapReduce is ideal for
 [^92]: Difference between Prim's and Kruskal's algorithm for MST – GeeksforGeeks, accessed October 6, 2025, [https://www.geeksforgeeks.org/dsa/difference-between-prims-and-kruskals-algorithm-for-mst/](https://www.geeksforgeeks.org/dsa/difference-between-prims-and-kruskals-algorithm-for-mst/)  
 [^93]: Parallel algorithms for minimum spanning trees – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Parallel_algorithms_for_minimum_spanning_trees](https://en.wikipedia.org/wiki/Parallel_algorithms_for_minimum_spanning_trees)  
 [^94]: Kruskal's algorithm – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Kruskal%27s_algorithm](https://en.wikipedia.org/wiki/Kruskal%27s_algorithm)
+[^95]: Asadianfam, Shiva & Shamsi, Mahboubeh & Rasouli Kenari, Abdolreza. (2021). TVD-MRDL: traffic violation detection system using MapReduce-based deep learning for large-scale data. Multimedia Tools and Applications. 80. 1-28. 10.1007/s11042-020-09714-8.
+[^96]: Fork–join model – Wikipedia, accessed October 6, 2025, [https://en.wikipedia.org/wiki/Fork-join_model](https://en.wikipedia.org/wiki/Fork-join_model)
+[^97]: Pipeline Pattern – https://patterns.eecs.berkeley.edu/?page_id=542
