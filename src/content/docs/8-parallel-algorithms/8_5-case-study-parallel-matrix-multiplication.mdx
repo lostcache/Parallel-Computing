@@ -3,72 +3,77 @@ title: "8.5 Case Study: Parallel Matrix Multiplication"
 description: "Exploring parallel approaches to matrix multiplication and their scalability properties."
 ---
 
-Matrix-matrix multiplication is a cornerstone of scientific and engineering computation, forming the computational core of applications in fields from linear algebra and physics simulations to machine learning. Its high computational intensity, with O(n³) arithmetic operations for n×n matrices, makes it an excellent candidate for parallelization and a standard benchmark for high-performance computing (HPC) systems.[^69] This case study examines two classic algorithms for distributed-memory parallel matrix multiplication, Cannon's algorithm and SUMMA, which employ distinct data decomposition and communication patterns to distribute the workload across a 2D grid of processors.
+Matrix-matrix multiplication is a cornerstone of scientific and engineering computation, forming the computational core of applications in fields from linear algebra and physics simulations to machine learning. Its high computational intensity, with $O(n^3)$ arithmetic operations for $n \times n$ matrices, makes it an excellent candidate for parallelization and a standard benchmark for high-performance computing (HPC) systems.[^69] This case study examines two classic algorithms for distributed-memory parallel matrix multiplication, Cannon's algorithm and SUMMA, which employ distinct data decomposition and communication patterns to distribute the workload across a 2D grid of processors.
 
 ### **Cannon's Algorithm**
 
-Cannon's algorithm is a memory-efficient parallel algorithm for multiplying two matrices on a 2D processor grid, typically a square grid of p = √p × √p processors with a torus (wraparound) network topology.[^71] It orchestrates the movement of data blocks in a highly structured, nearest-neighbor fashion to ensure each processor computes its share of the result matrix.
+Cannon's algorithm is a memory-efficient parallel algorithm for multiplying two matrices on a 2D processor grid, typically a square grid of $p = \sqrt{p} \times \sqrt{p}$ processors with a torus (wraparound) network topology.[^71] It orchestrates the movement of data blocks in a highly structured, nearest-neighbor fashion to ensure each processor computes its share of the result matrix.
 
 #### **Methodology**
 
-The algorithm for computing C = AB on a √p × √p grid, where processor P(i,j) is responsible for computing the sub-block C(i,j), proceeds in two main phases:[^71]
+The algorithm for computing $C = AB$ on a $\sqrt{p} \times \sqrt{p}$ grid, where processor $P(i,j)$ is responsible for computing the sub-block $C(i,j)$, proceeds in two main phases:[^71]
 
 1.  **Initial Alignment:** Before the main computation begins, the input matrices A and B are pre-aligned.
-    *   For each row i, the block A(i,j) is circularly shifted left by i positions.
-    *   For each column j, the block B(i,j) is circularly shifted up by j positions.
-    This initial skew ensures that after alignment, processor P(i,j) holds blocks A(i, (j+i)%√p) and B((i+j)%√p, j). These are the blocks needed to compute the first term in the sum for C(i,j).
-2.  **Compute-and-Shift Loop:** The algorithm then enters a main loop that iterates √p times. In each step of the loop:
-    *   **Compute:** Each processor P(i,j) multiplies its current local blocks of A and B and adds the result to its local C(i,j) block.
+    *   For each row $i$, the block $A(i,j)$ is circularly shifted left by $i$ positions.
+    *   For each column $j$, the block $B(i,j)$ is circularly shifted up by $j$ positions.
+    This initial skew ensures that after alignment, processor $P(i,j)$ holds blocks $A(i, (j+i) \bmod \sqrt{p})$ and $B((i+j) \bmod \sqrt{p}, j)$. These are the blocks needed to compute the first term in the sum for $C(i,j)$.
+2.  **Compute-and-Shift Loop:** The algorithm then enters a main loop that iterates $\sqrt{p}$ times. In each step of the loop:
+    *   **Compute:** Each processor $P(i,j)$ multiplies its current local blocks of A and B and adds the result to its local $C(i,j)$ block.
     *   **Shift:** Each processor shifts its block of A one position to the left (circularly) and its block of B one position up (circularly), receiving new blocks from its right and bottom neighbors, respectively.
 
-After √p steps, each block of A will have passed through each processor in its row, and each block of B will have passed through each processor in its column, ensuring that all necessary products for each C(i,j) have been computed. The algorithm is memory-efficient because each processor only needs to store one block of A, one of B, and one of C at any given time.[^69]
+After $\sqrt{p}$ steps, each block of A will have passed through each processor in its row, and each block of B will have passed through each processor in its column, ensuring that all necessary products for each $C(i,j)$ have been computed. The algorithm is memory-efficient because each processor only needs to store one block of A, one of B, and one of C at any given time.[^69]
+
+<div style={{ backgroundColor: 'white', textAlign: 'center' }}>
+  <img src="https://www.cs.fsu.edu/~xyuan/cop5570/lecture17_files/image018.gif" alt="Cannon's Algorithm Visualization" />
+</div>
+Credit: https://www.cs.fsu.edu/~xyuan/cop5570/lecture17_files/image018.gif
 
 ```pseudo
-Algorithm: CannonsAlgorithm(A[n×n], B[n×n], √p × √p processor grid)
-Input: Matrices A and B of size n×n, p = √p × √p processors
-Output: Matrix C = A × B
+Algorithm: CannonsAlgorithm(A[$n \times n$], B[$n \times n$], $\sqrt{p} \times \sqrt{p}$ processor grid)
+Input: Matrices A and B of size $n \times n$, $p = \sqrt{p} \times \sqrt{p}$ processors
+Output: Matrix $C = A \times B$
 
-// Assume n is divisible by √p
-// Processor P(i,j) initially holds blocks A(i,j) and B(i,j)
+// Assume n is divisible by $\sqrt{p}$
+// Processor $P(i,j)$ initially holds blocks $A(i,j)$ and $B(i,j)$
 
-block_size = n / √p
+block_size = $n / \sqrt{p}$
 
 // Phase 1: Initial Alignment (Pre-skewing)
-parallel for each processor P(i, j) do
+parallel for each processor $P(i, j)$ do
     // Shift A blocks: row i shifted left by i positions (circular)
-    A_local = receive_from(P(i, (j+i) mod √p))
+    A_local = receive_from($P(i, (j+i) \bmod \sqrt{p})$)
 
     // Shift B blocks: column j shifted up by j positions (circular)
-    B_local = receive_from(P((i+j) mod √p, j))
+    B_local = receive_from($P((i+j) \bmod \sqrt{p}, j)$)
 
     // Initialize result block
     C_local = 0
 end parallel
 
-// Phase 2: Compute-and-Shift Loop (√p iterations)
-for step = 0 to √p - 1 do
-    parallel for each processor P(i, j) do
+// Phase 2: Compute-and-Shift Loop ($\sqrt{p}$ iterations)
+for step = 0 to $\sqrt{p} - 1$ do
+    parallel for each processor $P(i, j)$ do
         // Compute: multiply local blocks and accumulate
-        C_local = C_local + (A_local × B_local)
+        C_local = C_local + (A_local $\times$ B_local)
 
         // Shift A blocks: send left, receive from right
-        send(A_local, to_processor=P(i, (j-1) mod √p))
-        A_local = receive_from(P(i, (j+1) mod √p))
+        send(A_local, to_processor=$P(i, (j-1) \bmod \sqrt{p})$)
+        A_local = receive_from($P(i, (j+1) \bmod \sqrt{p})$)
 
         // Shift B blocks: send up, receive from below
-        send(B_local, to_processor=P((i-1) mod √p, j))
-        B_local = receive_from(P((i+1) mod √p, j))
+        send(B_local, to_processor=$P((i-1) \bmod \sqrt{p}, j)$)
+        B_local = receive_from($P((i+1) \bmod \sqrt{p}, j)$)
     end parallel
 end
 
-// Each processor now has its final C(i,j) block
+// Each processor now has its final $C(i,j)$ block
 return C assembled from all C_local blocks
 ```
 
 Time Complexity:
-- Computation: O(√p) steps × O((n/√p)³) = O(n³/p)
-- Communication: O(√p) nearest-neighbor shifts
-- Memory per processor: O(n²/p)
+- Computation: $O(\sqrt{p})$ steps $\times$ $O((n/\sqrt{p})^3)$ = $O(n^3/p)$
+- Communication: $O(\sqrt{p})$ nearest-neighbor shifts
+- Memory per processor: $O(n^2/p)$
 
 Communication pattern: Torus/wraparound grid with nearest-neighbor only
 
@@ -78,32 +83,37 @@ SUMMA is a more flexible and widely used algorithm that is the basis for matrix 
 
 #### **Methodology**
 
-SUMMA also operates on a 2D processor grid, but it does not require the grid to be square. The algorithm for C = C + AB proceeds by iterating over block columns of A and block rows of B:[^74]
+SUMMA also operates on a 2D processor grid, but it does not require the grid to be square. The algorithm for $C = C + AB$ proceeds by iterating over block columns of A and block rows of B:[^74]
 
-1.  **Outer Loop:** The algorithm iterates k/b times, where k is the inner dimension of the matrices and b is the block size (panel width).
-2.  **Broadcast and Compute:** In each iteration, say the k-th one:
-    *   The processors owning the k-th block column of A (a panel of width b) broadcast their data **horizontally** across their respective processor rows.
-    *   Simultaneously, the processors owning the k-th block row of B broadcast their data **vertically** down their respective processor columns.
-    *   Each processor P(i,j) now has the necessary blocks of A and B. It performs a local matrix multiplication of the received blocks and adds the result to its local C(i,j) block.
+1.  **Outer Loop:** The algorithm iterates $k/b$ times, where $k$ is the inner dimension of the matrices and $b$ is the block size (panel width).
+2.  **Broadcast and Compute:** In each iteration, say the $k$-th one:
+    *   The processors owning the $k$-th block column of A (a panel of width $b$) broadcast their data **horizontally** across their respective processor rows.
+    *   Simultaneously, the processors owning the $k$-th block row of B broadcast their data **vertically** down their respective processor columns.
+    *   Each processor $P(i,j)$ now has the necessary blocks of A and B. It performs a local matrix multiplication of the received blocks and adds the result to its local $C(i,j)$ block.
 
-This process is repeated for all block columns of A and block rows of B. The result matrix C remains stationary, while the relevant panels of A and B are broadcast to all processors that need them for the current rank-k update.[^72]
+This process is repeated for all block columns of A and block rows of B. The result matrix C remains stationary, while the relevant panels of A and B are broadcast to all processors that need them for the current rank-$k$ update.[^72]
+
+<div style={{ backgroundColor: 'white', textAlign: 'center' }}>
+  <img src="https://i.stack.imgur.com/kK7eC.png" alt="SUMMA Algorithm Visualization" />
+</div>
+Credit: Stack Overflow, user 'Marius'
 
 ```pseudo
-Algorithm: SUMMA(A[n×n], B[n×n], p_rows × p_cols processor grid)
-Input: Matrices A and B of size n×n, processor grid p_rows × p_cols
-Output: Matrix C = A × B
+Algorithm: SUMMA(A[$n \times n$], B[$n \times n$], $p_{rows} \times p_{cols}$ processor grid)
+Input: Matrices A and B of size $n \times n$, processor grid $p_{rows} \times p_{cols}$
+Output: Matrix $C = A \times B$
 
-block_size = n / √p
-num_panels = n / block_size
+block_size = $n / \sqrt{p}$
+num_panels = $n$ / block_size
 
 // Initialize result blocks
-parallel for each processor P(i, j) do
+parallel for each processor $P(i, j)$ do
     C_local[i][j] = 0
 end parallel
 
 // Iterate over panels and accumulate partial products
 for k = 0 to num_panels - 1 do
-    parallel for each processor P(i, j) do
+    parallel for each processor $P(i, j)$ do
         // Broadcast k-th column of A horizontally across row i
         if j == owner_of_column_k then
             A_panel = A_local[i][k]
@@ -117,34 +127,34 @@ for k = 0 to num_panels - 1 do
         B_panel = broadcast_along_column(B_panel, column=j)
 
         // Local multiplication and accumulation
-        C_local[i][j] = C_local[i][j] + (A_panel × B_panel)
+        C_local[i][j] = C_local[i][j] + (A_panel $\times$ B_panel)
     end parallel
 end
 
 return C assembled from all C_local blocks
 ```
 
-Example for 4×4 processors:
+Example for $4 \times 4$ processors:
 - Iteration 0: Broadcast column 0 of A, row 0 of B
-  - P(0,0) computes: C(0,0) += A(0,0) × B(0,0)
-  - P(1,2) computes: C(1,2) += A(1,0) × B(0,2)
+  - $P(0,0)$ computes: $C(0,0) += A(0,0) \times B(0,0)$
+  - $P(1,2)$ computes: $C(1,2) += A(1,0) \times B(0,2)$
 - Iteration 1: Broadcast column 1 of A, row 1 of B
   - Continue accumulating partial products
 
 Time Complexity:
 - Computation: $O(n^3/p)$
-- Communication: $O(k/b \times n^2/\sqrt{p})$ broadcasts where k is matrix dimension
+- Communication: $O(k/b \times n^2/\sqrt{p})$ broadcasts where $k$ is matrix dimension
 - Memory per processor: $O(n^2/p)$
 
 ### **Performance Analysis and Comparison**
 
 The two algorithms embody different approaches to data orchestration. Cannon's algorithm is a "roll-roll-compute" method, where data blocks are systematically rolled through a static processor grid via nearest-neighbor communication.[^72] It is highly synchronous and spatially oriented. SUMMA is a "broadcast-broadcast-compute" method that replicates the currently needed data panels across processor rows and columns, while the result matrix C remains stationary.[^72]
 
-*   **Communication:** Cannon's algorithm relies on O(√p) nearest-neighbor shift operations. SUMMA relies on O(k/b) broadcast operations within processor rows and columns.[^77] While broadcasts may seem more expensive, they can be efficiently pipelined on modern interconnects. SUMMA's pattern can often utilize network links more effectively than the strictly 2D communication of Cannon's algorithm.[^77]
+*   **Communication:** Cannon's algorithm relies on $O(\sqrt{p})$ nearest-neighbor shift operations. SUMMA relies on $O(k/b)$ broadcast operations within processor rows and columns.[^77] While broadcasts may seem more expensive, they can be efficiently pipelined on modern interconnects. SUMMA's pattern can often utilize network links more effectively than the strictly 2D communication of Cannon's algorithm.[^77]
 *   **Flexibility:** SUMMA is significantly more flexible. It does not require a square processor grid or a torus topology. It also handles rectangular matrices and different block sizes, which has made it the de facto standard in production linear algebra libraries.[^72]
-*   **Memory:** Both are "2D" algorithms, meaning they distribute a single copy of the matrices over a 2D processor grid and have a memory footprint of O(n²/p) per processor. Under this constraint, their communication costs are asymptotically optimal.[^77]
+*   **Memory:** Both are "2D" algorithms, meaning they distribute a single copy of the matrices over a 2D processor grid and have a memory footprint of $O(n^2/p)$ per processor. Under this constraint, their communication costs are asymptotically optimal.[^77]
 
-This analysis leads to a deeper principle in modern HPC: trading memory for communication. The existence of "2.5D" and "3D" matrix multiplication algorithms demonstrates this trade-off. A 3D algorithm, for instance, might arrange p processors in a p¹ᐟ³×p¹ᐟ³×p¹ᐟ³ cube and replicate the input matrices p¹ᐟ³ times along the third dimension. This extra memory usage allows much of the required data to be local, dramatically reducing the volume of data that must be communicated over the network. Using c copies of the data can reduce the communication bandwidth cost by a factor of c¹ᐟ² and the latency cost by c³ᐟ².[^78] This shows that the notion of an "optimal" algorithm is not absolute but is contingent on available resources. While 2D algorithms like Cannon's and SUMMA are optimal under minimal memory constraints, communication-avoiding algorithms like the 2.5D/3D variants can achieve superior performance if additional memory is available.
+This analysis leads to a deeper principle in modern HPC: trading memory for communication. The existence of "2.5D" and "3D" matrix multiplication algorithms demonstrates this trade-off. A 3D algorithm, for instance, might arrange $p$ processors in a $p^{1/3} \times p^{1/3} \times p^{1/3}$ cube and replicate the input matrices $p^{1/3}$ times along the third dimension. This extra memory usage allows much of the required data to be local, dramatically reducing the volume of data that must be communicated over the network. Using $c$ copies of the data can reduce the communication bandwidth cost by a factor of $c^{1/2}$ and the latency cost by $c^{3/2}$.[^78] This shows that the notion of an "optimal" algorithm is not absolute but is contingent on available resources. While 2D algorithms like Cannon's and SUMMA are optimal under minimal memory constraints, communication-avoiding algorithms like the 2.5D/3D variants can achieve superior performance if additional memory is available.
 
 ## References
 

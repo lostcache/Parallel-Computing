@@ -81,7 +81,9 @@ The pattern's execution flow mirrors the recursive nature of divide-and-conquer 
 
 A key implementation detail that makes the Fork/Join pattern efficient is its use of a **work-stealing scheduler**.[^52] A pool of worker threads is created (typically one per CPU core), and each thread maintains its own double-ended queue (deque) of tasks. When a thread's deque is empty, it "steals" a task from the tail of another thread's deque. This provides dynamic load balancing, ensuring that all cores remain busy.[^53] This pattern is well-suited for problems like parallel merge sort and quicksort.[^50]
 
-![Fork-Join Model](/src/assets/fork_join.png)
+<div style={{ backgroundColor: 'white', textAlign: 'center' }}>
+  <img src="/src/assets/fork_join.png" alt="Fork-Join Model" />
+</div>
 Credit: https://en.wikipedia.org/wiki/Fork-join_model
 
 #### Example: Fork/Join Parallel Sum
