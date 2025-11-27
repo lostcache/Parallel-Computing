@@ -89,10 +89,6 @@ export default defineConfig({
           autogenerate: { directory: "10-future-of-parallelism" },
           collapsed: true,
         },
-        {
-          label: "11. Conclusion",
-          link: "/Parallel-Computing/11-conclusion/"
-        },
       ],
     }),
   ],
