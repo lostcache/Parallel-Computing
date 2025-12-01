@@ -38,7 +38,19 @@ The Connection Machine series underwent a significant architectural evolution, r
 
 #### **CM-1 and CM-2: The SIMD Hypercube**
 
-The initial models, the CM-1 and CM-2, were an embodiment of Hillis's original vision. Their key architectural features included:
+The initial models, the CM-1 and CM-2, were an embodiment of Hillis's original vision. Both machines utilized the same cubic casing (approximately 1.8 meters per side) and shared fundamental architectural principles.[^32]
+
+##### Architectural Details
+
+The CM-1 and CM-2 featured several innovative architectural elements:[^32]
+
+*   **Bit-Serial Processing Elements:** Each custom VLSI chip (using 2-micron CMOS) housed 16 1-bit processor cells, requiring 4,096 chips for a full 65,536-processor system.[^32]
+*   **Dual Communication Networks:**[^32]
+    *   **12-Dimensional Hypercube Router:** Provided general-purpose packet-switched messaging for irregular communication patterns (latency ~700 cycles). Included hardware message combining for reduction operations.[^32]
+    *   **NEWS Grid (North, East, West, South):** A dedicated 2D mesh for nearest-neighbor communication, approximately 6 times faster than the router for regular data patterns.[^32]
+*   **Virtual Processor Model:** Programmers could define data structures with more virtual processors than physical processors. The VP-ratio determined how many virtual processors each physical processor simulated, allowing programs to scale independently of hardware configuration.[^32]
+
+Their key architectural features included:
 
 <figure style="margin: 2rem 0; text-align: center;">
     <div style="background-color: black; padding: 1rem; display: inline-block; border-radius: 0.25rem;">
@@ -56,8 +68,9 @@ The initial models, the CM-1 and CM-2, were an embodiment of Hillis's original v
 
 *   **Massive Parallelism:** A full system contained 65,536 simple, bit-serial processors.
 *   **SIMD Execution:** A central sequencer broadcast a single instruction to all processors, which executed it synchronously on their local data. This model was highly efficient for uniform operations across large datasets.
-*   **Hypercube Interconnect:** The processors were connected in a 12-dimensional hypercube topology. This network provided high-bandwidth, low-latency communication, which is important for algorithms requiring frequent data exchange between processors.[^5]
-*   **Floating-Point Enhancement (CM-2):** The CM-2 augmented the architecture by adding a Weitek 3132 floating-point unit for every 32 processors, significantly improving performance on scientific and engineering calculations.[^21]
+*   **Hypercube Interconnect:** The processors were connected in a 12-dimensional hypercube topology. This network provided high-bandwidth, low-latency communication, with a maximum hop distance of only 12 between any two nodes.[^5]
+*   **Floating-Point Enhancement (CM-2):** The CM-2 addressed the CM-1's computational limitations by integrating Weitek 32-bit floating-point accelerators (FPAs).[^21][^32] The 1-bit processors handled control, memory access, and data routing, while feeding operands to the FPAs for high-speed arithmetic. This hybrid approach achieved 2.5 GigaFLOPS for 64-bit matrix multiplication and up to 5 GigaFLOPS for dot products.[^32]
+*   **Memory Expansion (CM-2):** Memory per processor increased from 4 Kilobits (CM-1) to 64-256 Kilobits (CM-2), supporting total system memory of 512 MB.[^32]
 
 The physical design was a cube composed of smaller cubes, with LEDs indicating processor activity.[^4]
 
@@ -70,7 +83,21 @@ The physical design was a cube composed of smaller cubes, with LEDs indicating p
 
 #### **CM-5: Shift to MIMD and Commodity Processors**
 
-The CM-5 marked a strategic change in response to the rapid performance gains of commodity RISC microprocessors.[^7]
+The CM-5, released in 1991, marked a strategic pivot in response to the rapid performance gains of commodity RISC microprocessors.[^7] TMC marketed this as a "Universal Architecture," capable of running both data-parallel and message-passing applications efficiently.[^33]
+
+##### Architectural Innovations
+
+The CM-5 introduced several groundbreaking architectural features:[^33]
+
+*   **Processing Nodes:** Each node contained:
+    *   32 MHz Sun SPARC processor (~22 MIPS) for control and scalar operations[^33]
+    *   Four custom vector processing units (VUs) operating at 32 MHz, providing 128 MFLOPS peak per node[^33]
+    *   32-128 MB of DRAM with 640 MB/sec aggregate memory bandwidth[^33]
+*   **Tripartite Network Architecture:**[^33]
+    *   **Data Network:** A 4-ary fat-tree topology with 20 MB/sec leaf bandwidth. Used randomized routing to prevent hot spots and provided scalable bisection bandwidth.[^33]
+    *   **Control Network:** A binary tree supporting broadcast, reduction, parallel prefix (scan), and barrier synchronization operations in hardware, enabling "Synchronized MIMD" execution.[^33]
+    *   **Diagnostic Network:** Provided back-door access for system monitoring and fault isolation.[^33]
+*   **Scalable Disk Array (SDA):** Storage nodes connected directly to the data network as first-class citizens, utilizing RAID 3 and delivering sustained transfer rates exceeding 100 MB/sec.[^33]
 
 <figure style="margin: 2rem 0; text-align: center;">
     <div style="background-color: black; padding: 1rem; display: inline-block; border-radius: 0.25rem;">
@@ -93,9 +120,12 @@ The CM-5 marked a strategic change in response to the rapid performance gains of
     <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">Processor node diagram for CM5. Image Credit: <a href="https://www.slideshare.net/slideshow/connection-machine/3859624" target="_blank" rel="noopener noreferrer">Greg Faust, Mike Gibson and Sal Valente</a></figcaption>
 </figure>
 
-*   **MIMD Architecture:** The custom bit-serial processors were replaced with hundreds or thousands of standard Sun SPARC RISC processors. Each processor could execute an independent instruction stream, making the system a MIMD machine.[^21]
-*   **"Fat Tree" Network:** The hypercube was replaced with a scalable "fat tree" topology, which provided high bisection bandwidth and was better suited to the more varied communication patterns of a MIMD architecture.[^21]
-*   **Programming Continuity:** Despite the underlying MIMD hardware, the system was designed to efficiently support the data-parallel programming model, ensuring software continuity and simplifying the transition for developers.[^4]
+*   **MIMD Architecture with Data-Parallel Support:** The custom bit-serial processors were replaced with hundreds or thousands of standard Sun SPARC RISC processors. Each processor could execute an independent instruction stream, making the system a MIMD machine, yet it could efficiently simulate SIMD behavior for data-parallel codes through the Control Network.[^21][^33]
+*   **Software Ecosystem:** The system ran CMost (a SunOS variant) and supported multiple programming models:[^33]
+    *   CM Fortran and C* for data parallelism
+    *   CMMD library for explicit message passing
+    *   Active Messages (developed at UC Berkeley), which reduced communication latency from milliseconds to microseconds[^33]
+*   **Performance Achievement:** A 1,024-node CM-5 at Los Alamos National Laboratory achieved 59.7 GFLOPS on the Linpack benchmark, ranking it #1 on the June 1993 TOP500 list.[^33]
 
 ### Impact and Legacy
 
@@ -118,3 +148,5 @@ The concepts developed by TMC provided a foundation for subsequent supercomputer
 [^25]: Connection Machine® Model CM-2 Technical Summary - Bitsavers.org, accessed October 2, 2025, [https://bitsavers.org/pdf/thinkingMachines/CM2/HA87-4_Connection_Machine_Model_CM-2_Technical_Summary_Apr1987.pdf](https://bitsavers.org/pdf/thinkingMachines/CM2/HA87-4_Connection_Machine_Model_CM-2_Technical_Summary_Apr1987.pdf)
 [^28]: The Connection Machine (CM-2) - An Introduction - Carolyn JC ..., accessed October 2, 2025, [https://spl.cde.state.co.us/artemis/ucbserials/ucb51110internet/1992/ucb51110615internet.pdf](https://spl.cde.state.co.us/artemis/ucbserials/ucb51110internet/1992/ucb51110615internet.pdf)
 [^31]: CM-2 | PSC - Pittsburgh Supercomputing Center, accessed October 2, 2025, [https://www.psc.edu/resources/cm-2/](https://www.psc.edu/resources/cm-2/)
+[^32]: Architecture and applications of the Connection Machine - cs.wisc.edu, accessed November 18, 2025, [https://pages.cs.wisc.edu/~markhill/restricted/computer88_cm2.pdf](https://pages.cs.wisc.edu/~markhill/restricted/computer88_cm2.pdf)
+[^33]: Connection Machine CM-5 Technical Summary - MIT CSAIL, accessed November 19, 2025, [https://people.csail.mit.edu/bradley/cm5docs/nov06/ConnectionMachineCM-5TechnicalSummary1993.pdf](https://people.csail.mit.edu/bradley/cm5docs/nov06/ConnectionMachineCM-5TechnicalSummary1993.pdf)
